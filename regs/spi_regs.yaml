@@ -1,0 +1,66 @@
+regmap:
+-   name: reset
+    description: Software reset register
+    address: 0
+    bitfields:
+    -   name: RESET
+        description: Reset the SPI
+        reset: 0
+        width: 1
+        lsb: 0
+        access: rw1s # Read and Write 1 to Clear. The field can be read, and when 1 is written field is cleared.
+        hardware: o
+
+-   name: config
+    description: SPI Configuration register
+    address: 4
+    bitfields:
+    -   name: CPOL
+        description: Clock Polarity
+        reset: 0
+        width: 1
+        lsb: 0
+        access: rw
+        hardware: o
+    -   name: CPHA
+        description: Clock Phase
+        reset: 0
+        width: 1
+        lsb: 1
+        access: rw
+        hardware: o
+
+-   name: clk_div
+    description: Clock Divider register
+    address: 8
+    bitfields:
+    -   name: DIV
+        description: Clock Divider
+        reset: 0
+        width: 16
+        lsb: 0
+        access: rw
+        hardware: o
+
+-   name: tx_data
+    description: Data Transmit Register
+    address: 12
+    bitfields:
+    -   name: DATA
+        description: Data to be transmitted
+        reset: 0
+        width: 32
+        lsb: 0
+        access: rw
+        hardware: o
+-   name: rx_data
+    description: Data Receive Register
+    address: 16
+    bitfields:
+    -   name: DATA
+        description: Data received
+        reset: 0
+        width: 32
+        lsb: 0
+        access: ro
+        hardware: i

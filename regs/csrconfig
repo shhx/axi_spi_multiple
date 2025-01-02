@@ -1,0 +1,32 @@
+[globcfg]
+base_address = 0
+data_width = 32
+address_width = 10
+register_reset = sync_neg
+address_increment = none
+address_alignment = data_width
+force_name_case = upper
+regmap_path = spi_regs.yaml
+
+[vhdl_module]
+path = spi_regs.vhd
+read_filler = 0
+interface = axil
+generator = Vhdl
+
+[py]
+path = sw/spi_regs.py
+generator = Python
+
+[c_header]
+path = sw/spi_regs.h
+prefix = CSR
+generator = CHeader
+
+[md_doc]
+path = doc/spi_regs.md
+title = Register map
+print_images = True
+image_dir = md_img
+print_conventions = True
+generator = Markdown
