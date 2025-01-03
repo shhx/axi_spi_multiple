@@ -26,6 +26,8 @@ port(
     csr_control_trans_inhibit_out : out std_logic;
     -- CONTROL.LSB_FIRST
     csr_control_lsb_first_out : out std_logic;
+    -- CONTROL.XFER_COUNT
+    csr_control_xfer_count_out : out std_logic_vector(3 downto 0);
 
     -- STATUS.TX_FULL
     csr_status_tx_full_in : in std_logic;
@@ -41,9 +43,6 @@ port(
 
     -- TX_DATA.DATA
     csr_tx_data_data_out : out std_logic_vector(31 downto 0);
-
-    -- RX_DATA.DATA
-    csr_rx_data_data_in : in std_logic_vector(31 downto 0);
 
     -- SLAVE_SELECT.SS
     csr_slave_select_ss_out : out std_logic_vector(31 downto 0);
@@ -111,6 +110,7 @@ signal csr_control_cpol_ff : std_logic;
 signal csr_control_cpha_ff : std_logic;
 signal csr_control_trans_inhibit_ff : std_logic;
 signal csr_control_lsb_first_ff : std_logic;
+signal csr_control_xfer_count_ff : std_logic_vector(3 downto 0);
 
 signal csr_status_rdata : std_logic_vector(31 downto 0);
 signal csr_status_ren : std_logic;
@@ -131,11 +131,6 @@ signal csr_tx_data_wen : std_logic;
 signal csr_tx_data_ren : std_logic;
 signal csr_tx_data_ren_ff : std_logic;
 signal csr_tx_data_data_ff : std_logic_vector(31 downto 0);
-
-signal csr_rx_data_rdata : std_logic_vector(31 downto 0);
-signal csr_rx_data_ren : std_logic;
-signal csr_rx_data_ren_ff : std_logic;
-signal csr_rx_data_data_ff : std_logic_vector(31 downto 0);
 
 signal csr_slave_select_rdata : std_logic_vector(31 downto 0);
 signal csr_slave_select_wen : std_logic;
@@ -281,7 +276,7 @@ end process;
 -- [0x4] - CONTROL - SPI Control register
 --------------------------------------------------------------------------------
 csr_control_rdata(7 downto 2) <= (others => '0');
-csr_control_rdata(31 downto 10) <= (others => '0');
+csr_control_rdata(31 downto 14) <= (others => '0');
 
 csr_control_wen <= wen when (waddr = std_logic_vector(to_unsigned(4, ADDR_W))) else '0'; -- 0x4
 
@@ -365,7 +360,7 @@ csr_control_trans_inhibit_out <= csr_control_trans_inhibit_ff;
 process (clk) begin
 if rising_edge(clk) then
 if (rst = '0') then
-    csr_control_trans_inhibit_ff <= '0'; -- 0x0
+    csr_control_trans_inhibit_ff <= '1'; -- 0x1
 else
         if (csr_control_wen = '1') then
             if (wstrb(1) = '1') then
@@ -401,6 +396,34 @@ else
             end if;
         else
             csr_control_lsb_first_ff <= csr_control_lsb_first_ff;
+        end if;
+end if;
+end if;
+end process;
+
+
+
+-----------------------
+-- Bit field:
+-- CONTROL(13 downto 10) - XFER_COUNT - Transfer Count
+-- access: rw, hardware: o
+-----------------------
+
+csr_control_rdata(13 downto 10) <= csr_control_xfer_count_ff;
+
+csr_control_xfer_count_out <= csr_control_xfer_count_ff;
+
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_control_xfer_count_ff <= "0001"; -- 0x1
+else
+        if (csr_control_wen = '1') then
+            if (wstrb(1) = '1') then
+                csr_control_xfer_count_ff(3 downto 0) <= wdata(13 downto 10);
+            end if;
+        else
+            csr_control_xfer_count_ff <= csr_control_xfer_count_ff;
         end if;
 end if;
 end if;
@@ -617,50 +640,12 @@ end process;
 
 --------------------------------------------------------------------------------
 -- CSR:
--- [0x14] - RX_DATA - Data Receive Register
+-- [0x14] - SLAVE_SELECT - Slave Select Register
 --------------------------------------------------------------------------------
 
+csr_slave_select_wen <= wen when (waddr = std_logic_vector(to_unsigned(20, ADDR_W))) else '0'; -- 0x14
 
-csr_rx_data_ren <= ren when (raddr = std_logic_vector(to_unsigned(20, ADDR_W))) else '0'; -- 0x14
-process (clk) begin
-if rising_edge(clk) then
-if (rst = '0') then
-    csr_rx_data_ren_ff <= '0'; -- 0x0
-else
-        csr_rx_data_ren_ff <= csr_rx_data_ren;
-end if;
-end if;
-end process;
-
------------------------
--- Bit field:
--- RX_DATA(31 downto 0) - DATA - Data received
--- access: ro, hardware: i
------------------------
-
-csr_rx_data_rdata(31 downto 0) <= csr_rx_data_data_ff;
-
-
-process (clk) begin
-if rising_edge(clk) then
-if (rst = '0') then
-    csr_rx_data_data_ff <= "00000000000000000000000000000000"; -- 0x0
-else
-            csr_rx_data_data_ff <= csr_rx_data_data_in;
-end if;
-end if;
-end process;
-
-
-
---------------------------------------------------------------------------------
--- CSR:
--- [0x18] - SLAVE_SELECT - Slave Select Register
---------------------------------------------------------------------------------
-
-csr_slave_select_wen <= wen when (waddr = std_logic_vector(to_unsigned(24, ADDR_W))) else '0'; -- 0x18
-
-csr_slave_select_ren <= ren when (raddr = std_logic_vector(to_unsigned(24, ADDR_W))) else '0'; -- 0x18
+csr_slave_select_ren <= ren when (raddr = std_logic_vector(to_unsigned(20, ADDR_W))) else '0'; -- 0x14
 process (clk) begin
 if rising_edge(clk) then
 if (rst = '0') then
@@ -733,8 +718,6 @@ else
         elsif raddr = std_logic_vector(to_unsigned(16, ADDR_W)) then -- 0x10
             rdata_ff <= csr_tx_data_rdata;
         elsif raddr = std_logic_vector(to_unsigned(20, ADDR_W)) then -- 0x14
-            rdata_ff <= csr_rx_data_rdata;
-        elsif raddr = std_logic_vector(to_unsigned(24, ADDR_W)) then -- 0x18
             rdata_ff <= csr_slave_select_rdata;
         else 
             rdata_ff <= "00000000000000000000000000000000"; -- 0x0

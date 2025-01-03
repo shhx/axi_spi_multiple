@@ -48,7 +48,6 @@ ENTITY spi_core IS
 
         -- Rx/Tx Data
         data_tx  : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
-        data_rx  : OUT STD_LOGIC_VECTOR(31 DOWNTO 0);
         tx_full  : OUT STD_LOGIC;
         tx_empty : OUT STD_LOGIC;
         rx_full  : OUT STD_LOGIC;
@@ -90,7 +89,7 @@ ARCHITECTURE Behavioral OF spi_core IS
     SIGNAL bit_count : INTEGER RANGE 0 TO MAX_NUMBER_READS * 8 - 1 := 0;
     SIGNAL bits_to_transfer : INTEGER RANGE 0 TO 8 * MAX_NUMBER_READS := 0;
     -- FSM States
-    TYPE fsm_state IS (IDLE, CS_LOW_WAIT, TRANSFER, CS_HIGH_WAIT);
+    TYPE fsm_state IS (IDLE, CS_LOW_WAIT, TRANSFER, CS_HIGH_WAIT, LONG_WAIT);
     SIGNAL state : fsm_state := IDLE;
 BEGIN
     -- SPI Clock Generation FSM
@@ -130,12 +129,6 @@ BEGIN
                     END IF;
 
                 WHEN TRANSFER =>
-                    -- IF clk_count = TO_INTEGER(UNSIGNED(clk_div)) THEN
-                    --     clk_count <= 0;
-                    --     spi_clk <= NOT spi_clk;
-                    -- ELSE
-                    --     clk_count <= clk_count + 1;
-                    -- END IF;
                     IF clk_count = SPI_CLK_CYCLES_HALF AND cpha = '1' THEN
                         spi_sample_clk <= NOT spi_sample_clk;
                     ELSIF clk_count = SPI_CLK_CYCLES AND cpha = '0' THEN
@@ -168,15 +161,43 @@ BEGIN
         END IF;
     END PROCESS;
 
-    -- Main SPI Logic
-    PROCESS (spi_sample_clk, rst, state, transfer_inhibit, chip_select)
+    -- SPI Transfer FSM
+    PROCESS (spi_sample_clk, rst, transfer_inhibit)
     BEGIN
-        -- Select falling or rasing based on CPHA and CPOL
-        -- CPOL = 0, CPHA = 0: 0 rising edge
-        -- CPOL = 0, CPHA = 1: 1 falling edge
-        -- CPOL = 1, CPHA = 0: 1 falling edge
-        -- CPOL = 1, CPHA = 1: 0 rising edge
-        IF chip_select = '0' THEN
+        IF rst = '0' THEN
+            tx_empty <= '1';
+            tx_full <= '0';
+            rx_empty <= '1';
+            rx_full <= '0';
+            bit_count <= 0;
+            spi_transfer_done <= '0';
+        ELSIF state = TRANSFER THEN
+            IF rising_edge(spi_sample_clk) THEN
+                -- Increment bit count
+                IF bit_count = bits_to_transfer - 1 THEN
+                    spi_transfer_done <= '1';
+                    bit_count <= 0;
+                ELSE
+                    bit_count <= bit_count + 1;
+                    spi_transfer_done <= '0';
+                END IF;
+            END IF;
+        END IF;
+        IF transfer_inhibit = '1' THEN
+            spi_transfer_done <= '0';
+            -- bit_count <= 0;
+        END IF;
+    END PROCESS;
+
+    -- SPI Data Management
+    PROCESS (rst, chip_select, lsb_first, bit_count, miso, data_tx)
+    BEGIN
+        IF rst = '0' THEN
+            mosi <= 'Z';
+            FOR i IN 0 TO N_SENSORS - 1 LOOP
+                sensor_data(i) <= (OTHERS => '0');
+            END LOOP;
+        ELSIF chip_select = '0' THEN
             IF lsb_first = '1' THEN
                 mosi <= data_tx(bit_count);
                 FOR i IN 0 TO N_SENSORS - 1 LOOP
@@ -192,36 +213,6 @@ BEGIN
             -- if chip_select = '1' then mosi should be tri-stated
             mosi <= 'Z';
         END IF;
-        IF rst = '0' THEN
-            tx_empty <= '1';
-            tx_full <= '0';
-            rx_empty <= '1';
-            rx_full <= '0';
-            data_rx <= (OTHERS => '0');
-            FOR i IN 0 TO N_SENSORS - 1 LOOP
-                sensor_data(i) <= (OTHERS => '0');
-            END LOOP;
-            bit_count <= 0;
-            spi_transfer_done <= '0';
-        ELSE
-            IF state /= TRANSFER THEN
-                IF transfer_inhibit = '1' THEN
-                    spi_transfer_done <= '0';
-                    bit_count <= 0;
-                END IF;
-            ELSIF state = TRANSFER THEN
-                IF rising_edge(spi_sample_clk) THEN
-                    -- Increment bit count
-                    IF bit_count = bits_to_transfer - 1 THEN
-                        spi_transfer_done <= '1';
-                    ELSE
-                        bit_count <= bit_count + 1;
-                        spi_transfer_done <= '0';
-                    END IF;
-                END IF;
-            END IF;
-        END IF;
-
     END PROCESS;
 
     -- Output Data Management

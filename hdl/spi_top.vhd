@@ -4,11 +4,14 @@ USE ieee.numeric_std.ALL;
 
 ENTITY spi_top IS
     GENERIC (
-        ADDR_W : integer := 10;
-        DATA_W : integer := 32;
-        STRB_W : integer := 4;
-        N_SENSORS      : INTEGER := 10;
-        N_CHIP_SELECTS : INTEGER := 1
+        ADDR_W           : INTEGER := 10;
+        DATA_W           : INTEGER := 32;
+        STRB_W           : INTEGER := 4;
+        N_SENSORS        : INTEGER := 10;
+        N_CHIP_SELECTS   : INTEGER := 1;
+        CS_WAIT_CYCLES   : INTEGER := 5; -- Number of clock cycles to wait after CS is asserted
+        MAX_NUMBER_READS : INTEGER := 4; -- Width of the read data
+        STREAM_WIDTH     : INTEGER := 32
     );
     PORT (
         spi_clk : IN STD_LOGIC;
@@ -31,7 +34,7 @@ ENTITY spi_top IS
 
         -- AXI-Lite Ports
         s_axi_lite_aclk    : IN STD_LOGIC;
-        s_axi_lite_aresetn    : IN STD_LOGIC;
+        s_axi_lite_aresetn : IN STD_LOGIC;
         s_axi_lite_awaddr  : IN STD_LOGIC_VECTOR(ADDR_W - 1 DOWNTO 0);
         s_axi_lite_awprot  : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
         s_axi_lite_awvalid : IN STD_LOGIC;
@@ -61,6 +64,8 @@ ARCHITECTURE rtl OF spi_top IS
     SIGNAL csr_control_cpha_out : STD_LOGIC;
     SIGNAL csr_control_trans_inhibit_out : STD_LOGIC;
     SIGNAL csr_control_lsb_first_out : STD_LOGIC;
+    SIGNAL csr_control_xfer_count_out : STD_LOGIC_VECTOR(4 - 1 DOWNTO 0);
+
     SIGNAL csr_status_tx_full_in : STD_LOGIC;
     SIGNAL csr_status_tx_empty_in : STD_LOGIC;
     SIGNAL csr_status_rx_full_in : STD_LOGIC;
@@ -75,12 +80,15 @@ BEGIN
     -- Instantiate SPI Core
     spi_core_inst : ENTITY work.spi_core
         GENERIC MAP(
-            N_SENSORS      => N_SENSORS,
-            N_CHIP_SELECTS => N_CHIP_SELECTS
+            N_SENSORS        => N_SENSORS,
+            N_CHIP_SELECTS   => N_CHIP_SELECTS,
+            MAX_NUMBER_READS => MAX_NUMBER_READS,
+            CS_WAIT_CYCLES   => CS_WAIT_CYCLES,
+            STREAM_WIDTH     => STREAM_WIDTH
         )
         PORT MAP(
-            clk          => spi_clk,
-            rst              => csr_reset_reset_out,
+            clk              => spi_clk,
+            rst              => rst,
             sck              => sck,
             cs               => cs,
             mosi             => mosi,
@@ -89,10 +97,15 @@ BEGIN
             cpol             => csr_control_cpol_out,
             clk_div          => csr_clk_div_div_out,
             lsb_first        => csr_control_lsb_first_out,
-            selected_cs      => csr_slave_select_ss_out,
+            selected_cs      => csr_slave_select_ss_out(N_CHIP_SELECTS - 1 DOWNTO 0),
             transfer_inhibit => csr_control_trans_inhibit_out,
-            data_tx          => csr_tx_data_data_out,
-            data_rx          => csr_rx_data_data_in,
+            xfer_count       => csr_control_xfer_count_out,
+
+            data_tx  => csr_tx_data_data_out,
+            tx_full  => csr_status_tx_full_in,
+            tx_empty => csr_status_tx_empty_in,
+            rx_full  => csr_status_rx_full_in,
+            rx_empty => csr_status_rx_empty_in,
 
             s_axis_out_tdata   => s_axis_out_tdata,
             s_axis_out_tkeep   => s_axis_out_tkeep,
@@ -120,14 +133,15 @@ BEGIN
             csr_control_cpha_out          => csr_control_cpha_out,
             csr_control_trans_inhibit_out => csr_control_trans_inhibit_out,
             csr_control_lsb_first_out     => csr_control_lsb_first_out,
-            csr_status_tx_full_in         => csr_status_tx_full_in,
-            csr_status_tx_empty_in        => csr_status_tx_empty_in,
-            csr_status_rx_full_in         => csr_status_rx_full_in,
-            csr_status_rx_empty_in        => csr_status_rx_empty_in,
-            csr_clk_div_div_out           => csr_clk_div_div_out,
-            csr_tx_data_data_out          => csr_tx_data_data_out,
-            csr_rx_data_data_in           => csr_rx_data_data_in,
-            csr_slave_select_ss_out       => csr_slave_select_ss_out,
+            csr_control_xfer_count_out    => csr_control_xfer_count_out,
+
+            csr_status_tx_full_in   => csr_status_tx_full_in,
+            csr_status_tx_empty_in  => csr_status_tx_empty_in,
+            csr_status_rx_full_in   => csr_status_rx_full_in,
+            csr_status_rx_empty_in  => csr_status_rx_empty_in,
+            csr_clk_div_div_out     => csr_clk_div_div_out,
+            csr_tx_data_data_out    => csr_tx_data_data_out,
+            csr_slave_select_ss_out => csr_slave_select_ss_out,
 
             -- AXI-Lite Ports
             axil_awaddr  => s_axi_lite_awaddr,

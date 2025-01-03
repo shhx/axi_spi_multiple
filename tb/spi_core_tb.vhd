@@ -11,11 +11,11 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
     -- Component Declaration for the Unit Under Test (UUT)
     COMPONENT spi_core IS
         GENERIC (
-            N_SENSORS      : INTEGER := 8;  -- Number of sensors
-            N_CHIP_SELECTS : INTEGER := 2;  -- Number of chip selects
-            STREAM_WIDTH   : INTEGER := 32; -- Width of the axi stream output
-            TRANSFER_WIDTH : INTEGER := 8;  -- Width of the read data
-            CS_WAIT_CYCLES : INTEGER := 5   -- Number of clock cycles to wait after CS is asserted
+            N_SENSORS        : INTEGER := 8;  -- Number of sensors
+            N_CHIP_SELECTS   : INTEGER := 2;  -- Number of chip selects
+            STREAM_WIDTH     : INTEGER := 32; -- Width of the axi stream output
+            CS_WAIT_CYCLES   : INTEGER := 5;  -- Number of clock cycles to wait after CS is asserted
+            MAX_NUMBER_READS : INTEGER := 1   -- Width of the read data
         );
         PORT (
             -- Configuration
@@ -25,10 +25,10 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
             lsb_first        : IN STD_LOGIC;
             selected_cs      : IN STD_LOGIC_VECTOR(N_CHIP_SELECTS - 1 DOWNTO 0);
             transfer_inhibit : IN STD_LOGIC;
+            xfer_count       : IN STD_LOGIC_VECTOR(4 - 1 DOWNTO 0); -- Number of 8 bit transfers
 
             -- Rx/Tx Data
             data_tx  : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
-            data_rx  : OUT STD_LOGIC_VECTOR(31 DOWNTO 0);
             tx_full  : OUT STD_LOGIC;
             tx_empty : OUT STD_LOGIC;
             rx_full  : OUT STD_LOGIC;
@@ -55,6 +55,7 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
     END COMPONENT;
 
     -- Signals to connect to the UUT
+    CONSTANT MAX_NUMBER_READS : INTEGER := 4;
     CONSTANT N_SENSORS : INTEGER := 10;
     CONSTANT N_CHIP_SELECTS : INTEGER := 2;
     CONSTANT STREAM_WIDTH : INTEGER := 32;
@@ -64,13 +65,13 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
     SIGNAL lsb_first : STD_LOGIC := '0';
 
     SIGNAL data_tx : STD_LOGIC_VECTOR(31 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL data_rx : STD_LOGIC_VECTOR(31 DOWNTO 0);
     SIGNAL tx_full : STD_LOGIC;
     SIGNAL tx_empty : STD_LOGIC;
     SIGNAL rx_full : STD_LOGIC;
     SIGNAL rx_empty : STD_LOGIC;
     SIGNAL selected_cs : STD_LOGIC_VECTOR(N_CHIP_SELECTS - 1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL transfer_inhibit : STD_LOGIC := '0';
+    SIGNAL xfer_count : STD_LOGIC_VECTOR(4 - 1 DOWNTO 0) := (OTHERS => '0');
 
     SIGNAL clk : STD_LOGIC := '0';
     SIGNAL rst : STD_LOGIC := '1';
@@ -94,20 +95,20 @@ BEGIN
     -- Instantiate the Unit Under Test (UUT)
     UUT : spi_core
     GENERIC MAP(
-        N_SENSORS      => 10,
-        STREAM_WIDTH   => 32,
-        TRANSFER_WIDTH => 8
+        N_SENSORS        => N_SENSORS,
+        STREAM_WIDTH     => STREAM_WIDTH,
+        MAX_NUMBER_READS => MAX_NUMBER_READS
     )
     PORT MAP(
-        cpha      => cpha,
-        cpol      => cpol,
-        clk_div   => clk_div,
-        lsb_first => lsb_first,
-        selected_cs => selected_cs,
+        cpha             => cpha,
+        cpol             => cpol,
+        clk_div          => clk_div,
+        lsb_first        => lsb_first,
+        selected_cs      => selected_cs,
         transfer_inhibit => transfer_inhibit,
+        xfer_count       => xfer_count,
 
         data_tx  => data_tx,
-        data_rx  => data_rx,
         tx_full  => tx_full,
         tx_empty => tx_empty,
         rx_full  => rx_full,
@@ -153,12 +154,13 @@ BEGIN
     BEGIN
 
         -- Configure SPI parameters
-        clk_div <= X"000A"; -- Set clock divider
+        clk_div <= X"000B"; -- Set clock divider
         cpha <= '0'; -- Set CPHA
-        cpol <= '1'; -- Set CPOL
+        cpol <= '0'; -- Set CPOL
         lsb_first <= '0'; -- MSB first
-        selected_cs <= B"01"; -- Select CS0
+        selected_cs <= B"10"; -- Select CS0
         transfer_inhibit <= '1'; -- Allow transfer
+        xfer_count <= STD_LOGIC_VECTOR(to_unsigned(1, xfer_count'length)); -- Set number of transfers
 
         -- Reset UUT
         rst <= '0';
@@ -174,11 +176,12 @@ BEGIN
         transfer_inhibit <= '0'; -- Allow transfer
 
         -- Wait for a few clock cycles
-        WAIT FOR CLK_PERIOD * 400;
+        WAIT FOR CLK_PERIOD * 800;
         cpha <= '1'; -- Set CPHA
         transfer_inhibit <= '1'; -- Inhibit transfer
         WAIT FOR CLK_PERIOD * 5;
         transfer_inhibit <= '0'; -- Allow transfer
+        WAIT FOR CLK_PERIOD * 800;
 
         -- Check outputs
         --ASSERT cs = '0' REPORT "Chip select did not assert correctly";
