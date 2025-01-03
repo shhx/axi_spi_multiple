@@ -84,14 +84,15 @@ ARCHITECTURE Behavioral OF spi_core IS
     SIGNAL spi_clk : STD_LOGIC := '0';
     SIGNAL shift_reg_tx : STD_LOGIC_VECTOR(TRANSFER_WIDTH - 1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL chip_select : STD_LOGIC := '1';
-    SIGNAL transfer_done : STD_LOGIC := '0';
+    SIGNAL spi_transfer_done : STD_LOGIC := '0';
+    SIGNAL axis_transfer_done : STD_LOGIC := '0';
     SIGNAL edge_select : STD_LOGIC := '0';
     -- FSM States
     TYPE fsm_state IS (IDLE, CS_LOW_WAIT, TRANSFER, CS_HIGH_WAIT);
     SIGNAL state : fsm_state := IDLE;
 BEGIN
     -- SPI Clock Generation FSM
-    PROCESS (clk, rst)
+    PROCESS (clk, rst, cpol)
     BEGIN
         IF rst = '0' THEN
             clk_count <= 0;
@@ -105,7 +106,7 @@ BEGIN
                     chip_select <= '1';
                     spi_clk <= cpol;
                     clk_count <= 0;
-                    IF transfer_inhibit = '0' AND transfer_done = '0' THEN
+                    IF transfer_inhibit = '0' AND spi_transfer_done = '0' THEN
                         wait_count <= 0;
                         state <= CS_LOW_WAIT;
                     END IF;
@@ -126,7 +127,7 @@ BEGIN
                     ELSE
                         clk_count <= clk_count + 1;
                     END IF;
-                    IF transfer_done = '1' THEN
+                    IF spi_transfer_done = '1' THEN
                         wait_count <= 0;
                         state <= CS_HIGH_WAIT;
                     END IF;
@@ -153,12 +154,17 @@ BEGIN
         -- CPOL = 0, CPHA = 1: falling edge
         -- CPOL = 1, CPHA = 0: falling edge
         -- CPOL = 1, CPHA = 1: rising edge
-        edge_select <= (cpha XOR cpol);
         IF chip_select = '0' THEN
             IF lsb_first = '1' THEN
                 mosi <= data_tx(bit_count);
+                FOR i IN 0 TO N_SENSORS - 1 LOOP
+                    sensor_data(i)(bit_count) <= miso(i);
+                END LOOP;
             ELSE
                 mosi <= data_tx(TRANSFER_WIDTH - 1 - bit_count);
+                FOR i IN 0 TO N_SENSORS - 1 LOOP
+                    sensor_data(i)(TRANSFER_WIDTH - 1 - bit_count) <= miso(i);
+                END LOOP;
             END IF;
         ELSE
             -- if chip_select = '1' then mosi should be tri-stated
@@ -169,111 +175,122 @@ BEGIN
             tx_full <= '0';
             rx_empty <= '1';
             rx_full <= '0';
-            bit_count <= 0;
             data_rx <= (OTHERS => '0');
             FOR i IN 0 TO N_SENSORS - 1 LOOP
                 sensor_data(i) <= (OTHERS => '0');
             END LOOP;
         ELSIF state = IDLE THEN
             IF transfer_inhibit = '1' THEN
-                transfer_done <= '0';
+                spi_transfer_done <= '0';
                 bit_count <= 0;
             END IF;
         ELSIF state = TRANSFER THEN
-            IF (edge_select = '0' AND rising_edge(spi_clk)) OR (edge_select = '1' AND falling_edge(spi_clk)) THEN
-                -- Start of transfer
-
-                -- Shift in MISO
-                IF lsb_first = '1' THEN
-                    FOR i IN 0 TO N_SENSORS - 1 LOOP
-                        sensor_data(i) <= miso(i) & sensor_data(i)(TRANSFER_WIDTH - 1 DOWNTO 1);
-                    END LOOP;
-                ELSE
-                    FOR i IN 0 TO N_SENSORS - 1 LOOP
-                        sensor_data(i) <= sensor_data(i)(TRANSFER_WIDTH - 2 DOWNTO 0) & miso(i);
-                    END LOOP;
-                END IF;
-
+            IF (edge_select = '0' AND rising_edge(spi_clk)) THEN
                 -- Increment bit count
                 IF bit_count = TRANSFER_WIDTH - 1 THEN
-                    transfer_done <= '1';
+                    spi_transfer_done <= '1';
                 ELSE
                     bit_count <= bit_count + 1;
-                    transfer_done <= '0';
+                    spi_transfer_done <= '0';
+                END IF;
+            ELSIF (edge_select = '1' AND falling_edge(spi_clk)) THEN
+                -- Increment bit count
+                IF bit_count = TRANSFER_WIDTH - 1 THEN
+                    spi_transfer_done <= '1';
+                ELSE
+                    bit_count <= bit_count + 1;
+                    spi_transfer_done <= '0';
                 END IF;
             END IF;
+
         END IF;
 
     END PROCESS;
 
-    -- PROCESS (rst, state, bit_count, transfer_inhibit)
+    -- edge_select <= (cpha XOR cpol);
+    -- PROCESS (rst, spi_clk, state)
     -- BEGIN
     --     IF rst = '0' THEN
-    --         transfer_done <= '0';
-    --     ELSE
-    --         CASE state IS
-    --             WHEN TRANSFER =>
-    --                 IF bit_count = TRANSFER_WIDTH - 1 THEN
-    --                     transfer_done <= '1';
-    --                 ELSE
-    --                     transfer_done <= '0';
-    --                 END IF;
-
-    --             WHEN OTHERS =>
-    --                 IF transfer_inhibit = '1' THEN
-    --                     transfer_done <= '0';
-    --                 END IF;
-    --         END CASE;
-    --     END IF;
-    -- END PROCESS;
-
-    -- -- Output Data Management
-    -- PROCESS (transfer_done, s_axis_aclk)
-    --     SIGNAL result_index : INTEGER := 0;
-    -- BEGIN
-    --     IF s_axis_aresetn = '0' THEN
-    --         s_axis_out_tdata <= (OTHERS => '0');
-    --         s_axis_out_tkeep <= (OTHERS => '0');
-    --         s_axis_out_tvalid <= '0';
-    --         s_axis_out_tlast <= '0';
-    --         result_index <= 0;
-    --     ELSIF rising_edge(s_axis_aclk) THEN
-    --         IF transfer_done = '1' AND s_axis_out_tready = '1' THEN
-    --             IF result_index < N_SENSORS THEN
-    --                 s_axis_out_tdata <= sensor_data(result_index);
-    --                 s_axis_out_tkeep <= (OTHERS => '1');
-    --                 s_axis_out_tvalid <= '1';
-    --                 result_index <= result_index + 1;
+    --         bit_count <= 0;
+    --     ELSIF rising_edge(spi_clk) AND edge_select = '0' THEN
+    --         IF STATE = TRANSFER THEN
+    --             IF bit_count = TRANSFER_WIDTH - 1 THEN
+    --                 bit_count <= 0;
     --             ELSE
-    --                 -- Transfer to AXIS is done
-    --                 s_axis_out_tdata <= (OTHERS => '0');
-    --                 s_axis_out_tkeep <= (OTHERS => '0');
-    --                 s_axis_out_tvalid <= '0';
-    --                 result_index <= 0;
-    --                 transfer_done <= '0';
+    --                 bit_count <= bit_count + 1;
     --             END IF;
-    --             IF result_index = N_SENSORS - 1 THEN
-    --                 s_axis_out_tlast <= '1';
-    --             ELSE
-    --                 s_axis_out_tlast <= '0';
-    --             END IF;
-    --             s_axis_out_tkeep <= (OTHERS => '1');
-    --         ELSE
-    --             result_index <= 0;
-    --             s_axis_out_tdata <= (OTHERS => '0');
-    --             s_axis_out_tvalid <= '0';
-    --             s_axis_out_tlast <= '0';
     --         END IF;
     --     END IF;
     -- END PROCESS;
 
+    -- PROCESS (rst, spi_clk, state)
+    -- BEGIN
+    --     IF rst = '0' THEN
+    --         bit_count <= 0;
+    --     ELSIF falling_edge(spi_clk) AND edge_select = '1' THEN
+    --         IF STATE = TRANSFER THEN
+    --             IF bit_count = TRANSFER_WIDTH - 1 THEN
+    --                 bit_count <= 0;
+    --             ELSE
+    --                 bit_count <= bit_count + 1;
+    --             END IF;
+    --         END IF;
+    --     END IF;
+    -- END PROCESS;
+    
+    -- Output Data Management
+    PROCESS (spi_transfer_done, s_axis_out_aclk, s_axis_out_aresetn)
+        VARIABLE result_index : INTEGER RANGE 0 TO N_SENSORS - 1 := 0;
+        VARIABLE zeros : STD_LOGIC_VECTOR(STREAM_WIDTH - TRANSFER_WIDTH - 1 DOWNTO 0) := (OTHERS => '0');
+    BEGIN
+        IF s_axis_out_aresetn = '0' THEN
+            s_axis_out_tdata <= (OTHERS => '0');
+            s_axis_out_tkeep <= (OTHERS => '0');
+            s_axis_out_tvalid <= '0';
+            s_axis_out_tlast <= '0';
+            axis_transfer_done <= '0';
+            result_index := 0;
+        ELSIF rising_edge(s_axis_out_aclk) THEN
+            IF spi_transfer_done = '1' AND s_axis_out_tready = '1' AND axis_transfer_done = '0' THEN
+                IF result_index < N_SENSORS THEN
+                    s_axis_out_tdata <= zeros & sensor_data(result_index);
+                    s_axis_out_tvalid <= '1';
+                    result_index := result_index + 1;
+                ELSE
+                    -- Transfer to AXIS is done
+                    s_axis_out_tdata <= (OTHERS => '0');
+                    s_axis_out_tvalid <= '0';
+                    result_index := 0;
+                END IF;
+                IF result_index = N_SENSORS - 1 THEN
+                    s_axis_out_tlast <= '1';
+                    axis_transfer_done <= '1';
+                ELSE
+                    s_axis_out_tlast <= '0';
+                    axis_transfer_done <= '0';
+                END IF;
+                s_axis_out_tkeep <= (OTHERS => '1');
+            ELSIF spi_transfer_done = '0' THEN
+                axis_transfer_done <= '0';
+            ELSE
+                result_index := 0;
+                s_axis_out_tdata <= (OTHERS => '0');
+                s_axis_out_tvalid <= '0';
+                s_axis_out_tlast <= '0';
+            END IF;
+        END IF;
+    END PROCESS;
+
     PROCESS (selected_cs, chip_select)
     BEGIN
         cs <= (OTHERS => '1');
-        -- Set the desired chip's select to the given value
-        IF TO_INTEGER(UNSIGNED(selected_cs)) < cs'length THEN
-            cs(TO_INTEGER(UNSIGNED(selected_cs))) <= chip_select;
-        END IF;
+        -- Set the desired chip's select to the given value, use one-hot encoding.
+        -- Bits set to '0' will be selected.
+        FOR i IN 0 TO N_CHIP_SELECTS - 1 LOOP
+            IF selected_cs(i) = '0' THEN
+                cs(i) <= chip_select;
+            END IF;
+        END LOOP;
     END PROCESS;
 
     sck <= spi_clk;

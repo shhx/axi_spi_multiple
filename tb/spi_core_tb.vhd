@@ -12,7 +12,7 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
     COMPONENT spi_core IS
         GENERIC (
             N_SENSORS      : INTEGER := 8;  -- Number of sensors
-            N_CHIP_SELECTS : INTEGER := 1;  -- Number of chip selects
+            N_CHIP_SELECTS : INTEGER := 2;  -- Number of chip selects
             STREAM_WIDTH   : INTEGER := 32; -- Width of the axi stream output
             TRANSFER_WIDTH : INTEGER := 8;  -- Width of the read data
             CS_WAIT_CYCLES : INTEGER := 5   -- Number of clock cycles to wait after CS is asserted
@@ -55,6 +55,9 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
     END COMPONENT;
 
     -- Signals to connect to the UUT
+    CONSTANT N_SENSORS : INTEGER := 10;
+    CONSTANT N_CHIP_SELECTS : INTEGER := 2;
+    CONSTANT STREAM_WIDTH : INTEGER := 32;
     SIGNAL cpha : STD_LOGIC := '0';
     SIGNAL cpol : STD_LOGIC := '0';
     SIGNAL clk_div : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
@@ -66,19 +69,19 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
     SIGNAL tx_empty : STD_LOGIC;
     SIGNAL rx_full : STD_LOGIC;
     SIGNAL rx_empty : STD_LOGIC;
-    SIGNAL selected_cs : STD_LOGIC_VECTOR(0 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL selected_cs : STD_LOGIC_VECTOR(N_CHIP_SELECTS - 1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL transfer_inhibit : STD_LOGIC := '0';
 
     SIGNAL clk : STD_LOGIC := '0';
     SIGNAL rst : STD_LOGIC := '1';
 
     SIGNAL sck : STD_LOGIC;
-    SIGNAL cs : STD_LOGIC_VECTOR(0 DOWNTO 0) := (OTHERS => '1');
+    SIGNAL cs : STD_LOGIC_VECTOR(N_CHIP_SELECTS - 1 DOWNTO 0) := (OTHERS => '1');
     SIGNAL miso : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
     SIGNAL mosi : STD_LOGIC;
 
-    SIGNAL s_axis_out_tdata : STD_LOGIC_VECTOR(31 DOWNTO 0);
-    SIGNAL s_axis_out_tkeep : STD_LOGIC_VECTOR(3 DOWNTO 0);
+    SIGNAL s_axis_out_tdata : STD_LOGIC_VECTOR(STREAM_WIDTH - 1 DOWNTO 0);
+    SIGNAL s_axis_out_tkeep : STD_LOGIC_VECTOR(STREAM_WIDTH/8 - 1 DOWNTO 0);
     SIGNAL s_axis_out_tvalid : STD_LOGIC;
     SIGNAL s_axis_out_tready : STD_LOGIC := '1';
     SIGNAL s_axis_out_tlast : STD_LOGIC;
@@ -154,13 +157,15 @@ BEGIN
         cpha <= '0'; -- Set CPHA
         cpol <= '1'; -- Set CPOL
         lsb_first <= '0'; -- MSB first
-        selected_cs <= "0"; -- Select CS0
+        selected_cs <= B"01"; -- Select CS0
         transfer_inhibit <= '1'; -- Allow transfer
 
         -- Reset UUT
         rst <= '0';
+        s_axis_aresetn <= '0';
         WAIT FOR 50 ns;
         rst <= '1';
+        s_axis_aresetn <= '1';
 
         -- Provide input data
         data_tx <= X"0000_00AA";

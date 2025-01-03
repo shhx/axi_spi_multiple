@@ -18,10 +18,23 @@ port(
     -- RESET.RESET
     csr_reset_reset_out : out std_logic;
 
-    -- CONFIG.CPOL
-    csr_config_cpol_out : out std_logic;
-    -- CONFIG.CPHA
-    csr_config_cpha_out : out std_logic;
+    -- CONTROL.CPOL
+    csr_control_cpol_out : out std_logic;
+    -- CONTROL.CPHA
+    csr_control_cpha_out : out std_logic;
+    -- CONTROL.TRANS_INHIBIT
+    csr_control_trans_inhibit_out : out std_logic;
+    -- CONTROL.LSB_FIRST
+    csr_control_lsb_first_out : out std_logic;
+
+    -- STATUS.TX_FULL
+    csr_status_tx_full_in : in std_logic;
+    -- STATUS.TX_EMPTY
+    csr_status_tx_empty_in : in std_logic;
+    -- STATUS.RX_FULL
+    csr_status_rx_full_in : in std_logic;
+    -- STATUS.RX_EMPTY
+    csr_status_rx_empty_in : in std_logic;
 
     -- CLK_DIV.DIV
     csr_clk_div_div_out : out std_logic_vector(15 downto 0);
@@ -31,6 +44,9 @@ port(
 
     -- RX_DATA.DATA
     csr_rx_data_data_in : in std_logic_vector(31 downto 0);
+
+    -- SLAVE_SELECT.SS
+    csr_slave_select_ss_out : out std_logic_vector(31 downto 0);
 
     -- AXI-Lite
     axil_awaddr   : in  std_logic_vector(ADDR_W-1 downto 0);
@@ -87,12 +103,22 @@ signal csr_reset_ren : std_logic;
 signal csr_reset_ren_ff : std_logic;
 signal csr_reset_reset_ff : std_logic;
 
-signal csr_config_rdata : std_logic_vector(31 downto 0);
-signal csr_config_wen : std_logic;
-signal csr_config_ren : std_logic;
-signal csr_config_ren_ff : std_logic;
-signal csr_config_cpol_ff : std_logic;
-signal csr_config_cpha_ff : std_logic;
+signal csr_control_rdata : std_logic_vector(31 downto 0);
+signal csr_control_wen : std_logic;
+signal csr_control_ren : std_logic;
+signal csr_control_ren_ff : std_logic;
+signal csr_control_cpol_ff : std_logic;
+signal csr_control_cpha_ff : std_logic;
+signal csr_control_trans_inhibit_ff : std_logic;
+signal csr_control_lsb_first_ff : std_logic;
+
+signal csr_status_rdata : std_logic_vector(31 downto 0);
+signal csr_status_ren : std_logic;
+signal csr_status_ren_ff : std_logic;
+signal csr_status_tx_full_ff : std_logic;
+signal csr_status_tx_empty_ff : std_logic;
+signal csr_status_rx_full_ff : std_logic;
+signal csr_status_rx_empty_ff : std_logic;
 
 signal csr_clk_div_rdata : std_logic_vector(31 downto 0);
 signal csr_clk_div_wen : std_logic;
@@ -110,6 +136,12 @@ signal csr_rx_data_rdata : std_logic_vector(31 downto 0);
 signal csr_rx_data_ren : std_logic;
 signal csr_rx_data_ren_ff : std_logic;
 signal csr_rx_data_data_ff : std_logic_vector(31 downto 0);
+
+signal csr_slave_select_rdata : std_logic_vector(31 downto 0);
+signal csr_slave_select_wen : std_logic;
+signal csr_slave_select_ren : std_logic;
+signal csr_slave_select_ren_ff : std_logic;
+signal csr_slave_select_ss_ff : std_logic_vector(31 downto 0);
 
 signal rdata_ff : std_logic_vector(31 downto 0);
 signal rvalid_ff : std_logic;
@@ -246,44 +278,45 @@ end process;
 
 --------------------------------------------------------------------------------
 -- CSR:
--- [0x4] - CONFIG - SPI Configuration register
+-- [0x4] - CONTROL - SPI Control register
 --------------------------------------------------------------------------------
-csr_config_rdata(31 downto 2) <= (others => '0');
+csr_control_rdata(7 downto 2) <= (others => '0');
+csr_control_rdata(31 downto 10) <= (others => '0');
 
-csr_config_wen <= wen when (waddr = std_logic_vector(to_unsigned(4, ADDR_W))) else '0'; -- 0x4
+csr_control_wen <= wen when (waddr = std_logic_vector(to_unsigned(4, ADDR_W))) else '0'; -- 0x4
 
-csr_config_ren <= ren when (raddr = std_logic_vector(to_unsigned(4, ADDR_W))) else '0'; -- 0x4
+csr_control_ren <= ren when (raddr = std_logic_vector(to_unsigned(4, ADDR_W))) else '0'; -- 0x4
 process (clk) begin
 if rising_edge(clk) then
 if (rst = '0') then
-    csr_config_ren_ff <= '0'; -- 0x0
+    csr_control_ren_ff <= '0'; -- 0x0
 else
-        csr_config_ren_ff <= csr_config_ren;
+        csr_control_ren_ff <= csr_control_ren;
 end if;
 end if;
 end process;
 
 -----------------------
 -- Bit field:
--- CONFIG(0) - CPOL - Clock Polarity
+-- CONTROL(0) - CPOL - Clock Polarity
 -- access: rw, hardware: o
 -----------------------
 
-csr_config_rdata(0) <= csr_config_cpol_ff;
+csr_control_rdata(0) <= csr_control_cpol_ff;
 
-csr_config_cpol_out <= csr_config_cpol_ff;
+csr_control_cpol_out <= csr_control_cpol_ff;
 
 process (clk) begin
 if rising_edge(clk) then
 if (rst = '0') then
-    csr_config_cpol_ff <= '0'; -- 0x0
+    csr_control_cpol_ff <= '0'; -- 0x0
 else
-        if (csr_config_wen = '1') then
+        if (csr_control_wen = '1') then
             if (wstrb(0) = '1') then
-                csr_config_cpol_ff <= wdata(0);
+                csr_control_cpol_ff <= wdata(0);
             end if;
         else
-            csr_config_cpol_ff <= csr_config_cpol_ff;
+            csr_control_cpol_ff <= csr_control_cpol_ff;
         end if;
 end if;
 end if;
@@ -293,25 +326,81 @@ end process;
 
 -----------------------
 -- Bit field:
--- CONFIG(1) - CPHA - Clock Phase
+-- CONTROL(1) - CPHA - Clock Phase
 -- access: rw, hardware: o
 -----------------------
 
-csr_config_rdata(1) <= csr_config_cpha_ff;
+csr_control_rdata(1) <= csr_control_cpha_ff;
 
-csr_config_cpha_out <= csr_config_cpha_ff;
+csr_control_cpha_out <= csr_control_cpha_ff;
 
 process (clk) begin
 if rising_edge(clk) then
 if (rst = '0') then
-    csr_config_cpha_ff <= '0'; -- 0x0
+    csr_control_cpha_ff <= '0'; -- 0x0
 else
-        if (csr_config_wen = '1') then
+        if (csr_control_wen = '1') then
             if (wstrb(0) = '1') then
-                csr_config_cpha_ff <= wdata(1);
+                csr_control_cpha_ff <= wdata(1);
             end if;
         else
-            csr_config_cpha_ff <= csr_config_cpha_ff;
+            csr_control_cpha_ff <= csr_control_cpha_ff;
+        end if;
+end if;
+end if;
+end process;
+
+
+
+-----------------------
+-- Bit field:
+-- CONTROL(8) - TRANS_INHIBIT - Inhibit data transfer
+-- access: rw, hardware: o
+-----------------------
+
+csr_control_rdata(8) <= csr_control_trans_inhibit_ff;
+
+csr_control_trans_inhibit_out <= csr_control_trans_inhibit_ff;
+
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_control_trans_inhibit_ff <= '0'; -- 0x0
+else
+        if (csr_control_wen = '1') then
+            if (wstrb(1) = '1') then
+                csr_control_trans_inhibit_ff <= wdata(8);
+            end if;
+        else
+            csr_control_trans_inhibit_ff <= csr_control_trans_inhibit_ff;
+        end if;
+end if;
+end if;
+end process;
+
+
+
+-----------------------
+-- Bit field:
+-- CONTROL(9) - LSB_FIRST - LSB First -> 0 = MSB first transfer format. 1 = LSB first transfer format.
+-- access: rw, hardware: o
+-----------------------
+
+csr_control_rdata(9) <= csr_control_lsb_first_ff;
+
+csr_control_lsb_first_out <= csr_control_lsb_first_ff;
+
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_control_lsb_first_ff <= '0'; -- 0x0
+else
+        if (csr_control_wen = '1') then
+            if (wstrb(1) = '1') then
+                csr_control_lsb_first_ff <= wdata(9);
+            end if;
+        else
+            csr_control_lsb_first_ff <= csr_control_lsb_first_ff;
         end if;
 end if;
 end if;
@@ -321,13 +410,115 @@ end process;
 
 --------------------------------------------------------------------------------
 -- CSR:
--- [0x8] - CLK_DIV - Clock Divider register
+-- [0x8] - STATUS - SPI Status register
+--------------------------------------------------------------------------------
+csr_status_rdata(31 downto 4) <= (others => '0');
+
+
+csr_status_ren <= ren when (raddr = std_logic_vector(to_unsigned(8, ADDR_W))) else '0'; -- 0x8
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_status_ren_ff <= '0'; -- 0x0
+else
+        csr_status_ren_ff <= csr_status_ren;
+end if;
+end if;
+end process;
+
+-----------------------
+-- Bit field:
+-- STATUS(0) - TX_FULL - Transmit FIFO Full
+-- access: ro, hardware: i
+-----------------------
+
+csr_status_rdata(0) <= csr_status_tx_full_ff;
+
+
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_status_tx_full_ff <= '0'; -- 0x0
+else
+            csr_status_tx_full_ff <= csr_status_tx_full_in;
+end if;
+end if;
+end process;
+
+
+
+-----------------------
+-- Bit field:
+-- STATUS(1) - TX_EMPTY - Transmit FIFO Empty
+-- access: ro, hardware: i
+-----------------------
+
+csr_status_rdata(1) <= csr_status_tx_empty_ff;
+
+
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_status_tx_empty_ff <= '1'; -- 0x1
+else
+            csr_status_tx_empty_ff <= csr_status_tx_empty_in;
+end if;
+end if;
+end process;
+
+
+
+-----------------------
+-- Bit field:
+-- STATUS(2) - RX_FULL - Receive FIFO Full
+-- access: ro, hardware: i
+-----------------------
+
+csr_status_rdata(2) <= csr_status_rx_full_ff;
+
+
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_status_rx_full_ff <= '0'; -- 0x0
+else
+            csr_status_rx_full_ff <= csr_status_rx_full_in;
+end if;
+end if;
+end process;
+
+
+
+-----------------------
+-- Bit field:
+-- STATUS(3) - RX_EMPTY - Receive FIFO Empty
+-- access: ro, hardware: i
+-----------------------
+
+csr_status_rdata(3) <= csr_status_rx_empty_ff;
+
+
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_status_rx_empty_ff <= '1'; -- 0x1
+else
+            csr_status_rx_empty_ff <= csr_status_rx_empty_in;
+end if;
+end if;
+end process;
+
+
+
+--------------------------------------------------------------------------------
+-- CSR:
+-- [0xc] - CLK_DIV - Clock Divider register
 --------------------------------------------------------------------------------
 csr_clk_div_rdata(31 downto 16) <= (others => '0');
 
-csr_clk_div_wen <= wen when (waddr = std_logic_vector(to_unsigned(8, ADDR_W))) else '0'; -- 0x8
+csr_clk_div_wen <= wen when (waddr = std_logic_vector(to_unsigned(12, ADDR_W))) else '0'; -- 0xc
 
-csr_clk_div_ren <= ren when (raddr = std_logic_vector(to_unsigned(8, ADDR_W))) else '0'; -- 0x8
+csr_clk_div_ren <= ren when (raddr = std_logic_vector(to_unsigned(12, ADDR_W))) else '0'; -- 0xc
 process (clk) begin
 if rising_edge(clk) then
 if (rst = '0') then
@@ -371,12 +562,12 @@ end process;
 
 --------------------------------------------------------------------------------
 -- CSR:
--- [0xc] - TX_DATA - Data Transmit Register
+-- [0x10] - TX_DATA - Data Transmit Register
 --------------------------------------------------------------------------------
 
-csr_tx_data_wen <= wen when (waddr = std_logic_vector(to_unsigned(12, ADDR_W))) else '0'; -- 0xc
+csr_tx_data_wen <= wen when (waddr = std_logic_vector(to_unsigned(16, ADDR_W))) else '0'; -- 0x10
 
-csr_tx_data_ren <= ren when (raddr = std_logic_vector(to_unsigned(12, ADDR_W))) else '0'; -- 0xc
+csr_tx_data_ren <= ren when (raddr = std_logic_vector(to_unsigned(16, ADDR_W))) else '0'; -- 0x10
 process (clk) begin
 if rising_edge(clk) then
 if (rst = '0') then
@@ -426,11 +617,11 @@ end process;
 
 --------------------------------------------------------------------------------
 -- CSR:
--- [0x10] - RX_DATA - Data Receive Register
+-- [0x14] - RX_DATA - Data Receive Register
 --------------------------------------------------------------------------------
 
 
-csr_rx_data_ren <= ren when (raddr = std_logic_vector(to_unsigned(16, ADDR_W))) else '0'; -- 0x10
+csr_rx_data_ren <= ren when (raddr = std_logic_vector(to_unsigned(20, ADDR_W))) else '0'; -- 0x14
 process (clk) begin
 if rising_edge(clk) then
 if (rst = '0') then
@@ -463,6 +654,61 @@ end process;
 
 
 --------------------------------------------------------------------------------
+-- CSR:
+-- [0x18] - SLAVE_SELECT - Slave Select Register
+--------------------------------------------------------------------------------
+
+csr_slave_select_wen <= wen when (waddr = std_logic_vector(to_unsigned(24, ADDR_W))) else '0'; -- 0x18
+
+csr_slave_select_ren <= ren when (raddr = std_logic_vector(to_unsigned(24, ADDR_W))) else '0'; -- 0x18
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_slave_select_ren_ff <= '0'; -- 0x0
+else
+        csr_slave_select_ren_ff <= csr_slave_select_ren;
+end if;
+end if;
+end process;
+
+-----------------------
+-- Bit field:
+-- SLAVE_SELECT(31 downto 0) - SS - Slave Select
+-- access: rw, hardware: o
+-----------------------
+
+csr_slave_select_rdata(31 downto 0) <= csr_slave_select_ss_ff;
+
+csr_slave_select_ss_out <= csr_slave_select_ss_ff;
+
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_slave_select_ss_ff <= "00000000000000000000000000000000"; -- 0x0
+else
+        if (csr_slave_select_wen = '1') then
+            if (wstrb(0) = '1') then
+                csr_slave_select_ss_ff(7 downto 0) <= wdata(7 downto 0);
+            end if;
+            if (wstrb(1) = '1') then
+                csr_slave_select_ss_ff(15 downto 8) <= wdata(15 downto 8);
+            end if;
+            if (wstrb(2) = '1') then
+                csr_slave_select_ss_ff(23 downto 16) <= wdata(23 downto 16);
+            end if;
+            if (wstrb(3) = '1') then
+                csr_slave_select_ss_ff(31 downto 24) <= wdata(31 downto 24);
+            end if;
+        else
+            csr_slave_select_ss_ff <= csr_slave_select_ss_ff;
+        end if;
+end if;
+end if;
+end process;
+
+
+
+--------------------------------------------------------------------------------
 -- Write ready
 --------------------------------------------------------------------------------
 wready <= '1';
@@ -479,13 +725,17 @@ else
         if raddr = std_logic_vector(to_unsigned(0, ADDR_W)) then -- 0x0
             rdata_ff <= csr_reset_rdata;
         elsif raddr = std_logic_vector(to_unsigned(4, ADDR_W)) then -- 0x4
-            rdata_ff <= csr_config_rdata;
+            rdata_ff <= csr_control_rdata;
         elsif raddr = std_logic_vector(to_unsigned(8, ADDR_W)) then -- 0x8
-            rdata_ff <= csr_clk_div_rdata;
+            rdata_ff <= csr_status_rdata;
         elsif raddr = std_logic_vector(to_unsigned(12, ADDR_W)) then -- 0xc
-            rdata_ff <= csr_tx_data_rdata;
+            rdata_ff <= csr_clk_div_rdata;
         elsif raddr = std_logic_vector(to_unsigned(16, ADDR_W)) then -- 0x10
+            rdata_ff <= csr_tx_data_rdata;
+        elsif raddr = std_logic_vector(to_unsigned(20, ADDR_W)) then -- 0x14
             rdata_ff <= csr_rx_data_rdata;
+        elsif raddr = std_logic_vector(to_unsigned(24, ADDR_W)) then -- 0x18
+            rdata_ff <= csr_slave_select_rdata;
         else 
             rdata_ff <= "00000000000000000000000000000000"; -- 0x0
         end if;
