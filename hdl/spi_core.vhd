@@ -31,15 +31,19 @@ USE IEEE.NUMERIC_STD.ALL;
 ENTITY spi_core IS
     GENERIC (
         N_SENSORS      : INTEGER := 8;  -- Number of sensors
+        N_CHIP_SELECTS : INTEGER := 1;  -- Number of chip selects
         STREAM_WIDTH   : INTEGER := 32; -- Width of the axi stream output
-        TRANSFER_WIDTH : INTEGER := 8   -- Width of the read data
+        TRANSFER_WIDTH : INTEGER := 8;  -- Width of the read data
+        CS_WAIT_CYCLES : INTEGER := 5   -- Number of clock cycles to wait after CS is asserted
     );
     PORT (
         -- Configuration
-        cpha      : IN STD_LOGIC;
-        cpol      : IN STD_LOGIC;
-        clk_div   : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
-        lsb_first : IN STD_LOGIC;
+        cpha             : IN STD_LOGIC;
+        cpol             : IN STD_LOGIC;
+        clk_div          : IN STD_LOGIC_VECTOR(15 DOWNTO 0);
+        lsb_first        : IN STD_LOGIC;
+        selected_cs      : IN STD_LOGIC_VECTOR(N_CHIP_SELECTS - 1 DOWNTO 0);
+        transfer_inhibit : IN STD_LOGIC;
 
         -- Rx/Tx Data
         data_tx  : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
@@ -54,18 +58,18 @@ ENTITY spi_core IS
 
         -- Harware Signals
         sck  : OUT STD_LOGIC;
-        cs   : OUT STD_LOGIC;
+        cs   : OUT STD_LOGIC_VECTOR(N_CHIP_SELECTS - 1 DOWNTO 0);
         miso : IN STD_LOGIC_VECTOR(N_SENSORS - 1 DOWNTO 0);
         mosi : OUT STD_LOGIC;
 
         -- Axi stream output
-        s_axis_out_tdata  : OUT STD_LOGIC_VECTOR(STREAM_WIDTH - 1 DOWNTO 0);
-        s_axis_out_tkeep  : OUT STD_LOGIC_VECTOR((STREAM_WIDTH/8) - 1 DOWNTO 0);
-        s_axis_out_tvalid : OUT STD_LOGIC;
-        s_axis_out_tready : IN STD_LOGIC;
-        s_axis_out_tlast  : OUT STD_LOGIC;
-        s_axis_aclk       : IN STD_LOGIC;
-        s_axis_aresetn    : IN STD_LOGIC
+        s_axis_out_tdata   : OUT STD_LOGIC_VECTOR(STREAM_WIDTH - 1 DOWNTO 0);
+        s_axis_out_tkeep   : OUT STD_LOGIC_VECTOR((STREAM_WIDTH/8) - 1 DOWNTO 0);
+        s_axis_out_tvalid  : OUT STD_LOGIC;
+        s_axis_out_tready  : IN STD_LOGIC;
+        s_axis_out_tlast   : OUT STD_LOGIC;
+        s_axis_out_aclk    : IN STD_LOGIC;
+        s_axis_out_aresetn : IN STD_LOGIC
     );
 END spi_core;
 
@@ -76,64 +80,115 @@ ARCHITECTURE Behavioral OF spi_core IS
     SIGNAL sensor_data : data_array;
     SIGNAL bit_count : INTEGER RANGE 0 TO TRANSFER_WIDTH - 1 := 0;
     SIGNAL clk_count : INTEGER RANGE 0 TO 2 ** 16 - 1 := 0;
+    SIGNAL wait_count : INTEGER RANGE 0 TO 2 ** 16 - 1 := 0;
     SIGNAL spi_clk : STD_LOGIC := '0';
     SIGNAL shift_reg_tx : STD_LOGIC_VECTOR(TRANSFER_WIDTH - 1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL chip_select : STD_LOGIC := '1';
     SIGNAL transfer_done : STD_LOGIC := '0';
+    SIGNAL edge_select : STD_LOGIC := '0';
     -- FSM States
-    -- TYPE state IS (IDLE, CS_LOW, TRANSFER, CS_HIGH);
-    -- SIGNAL state : state := IDLE;
+    TYPE fsm_state IS (IDLE, CS_LOW_WAIT, TRANSFER, CS_HIGH_WAIT);
+    SIGNAL state : fsm_state := IDLE;
 BEGIN
-    -- SPI Clock Generation
+    -- SPI Clock Generation FSM
     PROCESS (clk, rst)
     BEGIN
-        IF rst = '1' THEN
+        IF rst = '0' THEN
             clk_count <= 0;
+            wait_count <= 0;
             spi_clk <= cpol;
+            chip_select <= '1';
+            state <= IDLE;
         ELSIF rising_edge(clk) THEN
-            IF clk_count = TO_INTEGER(UNSIGNED(clk_div)) THEN
-                clk_count <= 0;
-                spi_clk <= NOT spi_clk;
-            ELSE
-                clk_count <= clk_count + 1;
-            END IF;
+            CASE state IS
+                WHEN IDLE =>
+                    chip_select <= '1';
+                    spi_clk <= cpol;
+                    clk_count <= 0;
+                    IF transfer_inhibit = '0' AND transfer_done = '0' THEN
+                        wait_count <= 0;
+                        state <= CS_LOW_WAIT;
+                    END IF;
+
+                WHEN CS_LOW_WAIT =>
+                    chip_select <= '0';
+                    IF wait_count = CS_WAIT_CYCLES THEN
+                        wait_count <= 0;
+                        state <= TRANSFER;
+                    ELSE
+                        wait_count <= wait_count + 1;
+                    END IF;
+
+                WHEN TRANSFER =>
+                    IF clk_count = TO_INTEGER(UNSIGNED(clk_div)) THEN
+                        clk_count <= 0;
+                        spi_clk <= NOT spi_clk;
+                    ELSE
+                        clk_count <= clk_count + 1;
+                    END IF;
+                    IF transfer_done = '1' THEN
+                        wait_count <= 0;
+                        state <= CS_HIGH_WAIT;
+                    END IF;
+
+                WHEN CS_HIGH_WAIT =>
+                    IF wait_count = CS_WAIT_CYCLES THEN
+                        wait_count <= 0;
+                        state <= IDLE;
+                    ELSE
+                        wait_count <= wait_count + 1;
+                    END IF;
+
+                WHEN OTHERS =>
+                    state <= IDLE;
+            END CASE;
         END IF;
     END PROCESS;
 
     -- Main SPI Logic
-    PROCESS (spi_clk, rst)
+    PROCESS (spi_clk, rst, state, transfer_inhibit, chip_select)
     BEGIN
-        IF rst = '1' THEN
+        -- Select falling or rasing based on CPHA and CPOL
+        -- CPOL = 0, CPHA = 0: rising edge
+        -- CPOL = 0, CPHA = 1: falling edge
+        -- CPOL = 1, CPHA = 0: falling edge
+        -- CPOL = 1, CPHA = 1: rising edge
+        edge_select <= (cpha XOR cpol);
+        IF chip_select = '0' THEN
+            IF lsb_first = '1' THEN
+                mosi <= data_tx(bit_count);
+            ELSE
+                mosi <= data_tx(TRANSFER_WIDTH - 1 - bit_count);
+            END IF;
+        ELSE
+            -- if chip_select = '1' then mosi should be tri-stated
+            mosi <= 'Z';
+        END IF;
+        IF rst = '0' THEN
             tx_empty <= '1';
             tx_full <= '0';
             rx_empty <= '1';
             rx_full <= '0';
             bit_count <= 0;
-            chip_select <= '1';
-            transfer_done <= '0';
             data_rx <= (OTHERS => '0');
-            mosi <= '0';
             FOR i IN 0 TO N_SENSORS - 1 LOOP
                 sensor_data(i) <= (OTHERS => '0');
             END LOOP;
-        ELSIF rising_edge(spi_clk) THEN
-            IF transfer_done = '0' THEN
+        ELSIF state = IDLE THEN
+            IF transfer_inhibit = '1' THEN
+                transfer_done <= '0';
+                bit_count <= 0;
+            END IF;
+        ELSIF state = TRANSFER THEN
+            IF (edge_select = '0' AND rising_edge(spi_clk)) OR (edge_select = '1' AND falling_edge(spi_clk)) THEN
                 -- Start of transfer
-                IF bit_count = 0 THEN
-                    chip_select <= '0';
-                    shift_reg_tx <= data_tx(TRANSFER_WIDTH - 1 DOWNTO 0);
-                END IF;
 
-                -- Shift out MOSI and shift in MISO
+                -- Shift in MISO
                 IF lsb_first = '1' THEN
-                    mosi <= shift_reg_tx(0);
-                    shift_reg_tx <= '0' & shift_reg_tx(TRANSFER_WIDTH - 1 DOWNTO 1);
                     FOR i IN 0 TO N_SENSORS - 1 LOOP
                         sensor_data(i) <= miso(i) & sensor_data(i)(TRANSFER_WIDTH - 1 DOWNTO 1);
                     END LOOP;
                 ELSE
-                    mosi <= shift_reg_tx(TRANSFER_WIDTH - 1);
-                    shift_reg_tx <= shift_reg_tx(TRANSFER_WIDTH - 2 DOWNTO 0) & '0';
                     FOR i IN 0 TO N_SENSORS - 1 LOOP
                         sensor_data(i) <= sensor_data(i)(TRANSFER_WIDTH - 2 DOWNTO 0) & miso(i);
                     END LOOP;
@@ -141,15 +196,36 @@ BEGIN
 
                 -- Increment bit count
                 IF bit_count = TRANSFER_WIDTH - 1 THEN
-                    bit_count <= 0;
                     transfer_done <= '1';
-                    chip_select <= '1';
                 ELSE
                     bit_count <= bit_count + 1;
+                    transfer_done <= '0';
                 END IF;
             END IF;
         END IF;
+
     END PROCESS;
+
+    -- PROCESS (rst, state, bit_count, transfer_inhibit)
+    -- BEGIN
+    --     IF rst = '0' THEN
+    --         transfer_done <= '0';
+    --     ELSE
+    --         CASE state IS
+    --             WHEN TRANSFER =>
+    --                 IF bit_count = TRANSFER_WIDTH - 1 THEN
+    --                     transfer_done <= '1';
+    --                 ELSE
+    --                     transfer_done <= '0';
+    --                 END IF;
+
+    --             WHEN OTHERS =>
+    --                 IF transfer_inhibit = '1' THEN
+    --                     transfer_done <= '0';
+    --                 END IF;
+    --         END CASE;
+    --     END IF;
+    -- END PROCESS;
 
     -- -- Output Data Management
     -- PROCESS (transfer_done, s_axis_aclk)
@@ -190,6 +266,15 @@ BEGIN
     --         END IF;
     --     END IF;
     -- END PROCESS;
+
+    PROCESS (selected_cs, chip_select)
+    BEGIN
+        cs <= (OTHERS => '1');
+        -- Set the desired chip's select to the given value
+        IF TO_INTEGER(UNSIGNED(selected_cs)) < cs'length THEN
+            cs(TO_INTEGER(UNSIGNED(selected_cs))) <= chip_select;
+        END IF;
+    END PROCESS;
+
     sck <= spi_clk;
-    cs <= chip_select;
 END Behavioral;
