@@ -88,6 +88,13 @@ regmap:
         lsb: 3
         access: ro
         hardware: i
+    -   name: AXIS_XFER_ERROR
+        description: AXI Stream Transfer Error
+        reset: 0
+        width: 1
+        lsb: 4
+        access: rolh
+        hardware: i
 
 -   name: clk_div
     description: Clock Divider register

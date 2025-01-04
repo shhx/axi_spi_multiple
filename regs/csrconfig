@@ -14,9 +14,9 @@ read_filler = 0
 interface = axil
 generator = Vhdl
 
-[py]
-path = sw/spi_regs.py
-generator = Python
+; [py]
+; path = sw/spi_regs.py
+; generator = Python
 
 [c_header]
 path = sw/spi_regs.h

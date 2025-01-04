@@ -4,10 +4,10 @@ USE ieee.numeric_std.ALL;
 
 ENTITY spi_top IS
     GENERIC (
-        ADDR_W           : INTEGER := 10;
-        DATA_W           : INTEGER := 32;
-        STRB_W           : INTEGER := 4;
-        
+        ADDR_W : INTEGER := 10;
+        DATA_W : INTEGER := 32;
+        STRB_W : INTEGER := 4;
+
         N_SENSORS        : INTEGER := 10;
         N_CHIP_SELECTS   : INTEGER := 1;
         CS_WAIT_CYCLES   : INTEGER := 5; -- Number of clock cycles to wait after CS is asserted
@@ -67,6 +67,7 @@ ARCHITECTURE rtl OF spi_top IS
     SIGNAL csr_control_lsb_first_out : STD_LOGIC;
     SIGNAL csr_control_xfer_count_out : STD_LOGIC_VECTOR(4 - 1 DOWNTO 0);
     SIGNAL csr_control_automatic_mode_out : STD_LOGIC;
+    SIGNAL csr_status_axis_xfer_error_in : STD_LOGIC;
 
     SIGNAL csr_status_tx_full_in : STD_LOGIC;
     SIGNAL csr_status_tx_empty_in : STD_LOGIC;
@@ -102,6 +103,7 @@ BEGIN
             selected_cs      => csr_slave_select_ss_out(N_CHIP_SELECTS - 1 DOWNTO 0),
             transfer_inhibit => csr_control_trans_inhibit_out,
             xfer_count       => csr_control_xfer_count_out,
+            xfer_error       => csr_status_axis_xfer_error_in,
 
             long_wait_cycles    => csr_wait_cycles_cycles_out,
             automatic_transfers => csr_control_automatic_mode_out,
@@ -140,6 +142,7 @@ BEGIN
             csr_control_lsb_first_out      => csr_control_lsb_first_out,
             csr_control_xfer_count_out     => csr_control_xfer_count_out,
             csr_control_automatic_mode_out => csr_control_automatic_mode_out,
+            csr_status_axis_xfer_error_in  => csr_status_axis_xfer_error_in,
 
             csr_status_tx_full_in   => csr_status_tx_full_in,
             csr_status_tx_empty_in  => csr_status_tx_empty_in,

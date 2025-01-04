@@ -45,6 +45,7 @@ ENTITY spi_core IS
         selected_cs      : IN STD_LOGIC_VECTOR(N_CHIP_SELECTS - 1 DOWNTO 0);
         transfer_inhibit : IN STD_LOGIC;
         xfer_count       : IN STD_LOGIC_VECTOR(4 - 1 DOWNTO 0); -- Number of 8 bit transfers
+        xfer_error       : OUT STD_LOGIC;
 
         -- Automatic Transfer mode
         long_wait_cycles    : IN STD_LOGIC_VECTOR(31 DOWNTO 0); -- Number of clock cycles to wait after CS is de-asserted
@@ -89,10 +90,13 @@ ARCHITECTURE Behavioral OF spi_core IS
     SIGNAL shift_reg_tx : STD_LOGIC_VECTOR(MAX_NUMBER_READS * 8 - 1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL chip_select : STD_LOGIC := '1';
     SIGNAL spi_transfer_done : STD_LOGIC := '0';
+    SIGNAL prev_spi_transfer_done : STD_LOGIC := '0';
     SIGNAL axis_transfer_done : STD_LOGIC := '0';
     SIGNAL bit_count : INTEGER RANGE 0 TO MAX_NUMBER_READS * 8 - 1 := 0;
     SIGNAL bits_to_transfer : INTEGER RANGE 0 TO 8 * MAX_NUMBER_READS := 0;
     SIGNAL prev_transfer_inhibit : STD_LOGIC := '1';
+    SIGNAL axi_transfer_error : STD_LOGIC := '0';
+    SIGNAL result_index : INTEGER RANGE 0 TO N_SENSORS - 1 := 0;
     -- FSM States
     TYPE fsm_state IS (IDLE, CS_LOW_WAIT, TRANSFER, CS_HIGH_WAIT, LONG_WAIT);
     SIGNAL state : fsm_state := IDLE;
@@ -239,13 +243,15 @@ BEGIN
             END IF;
         ELSE
             -- if chip_select = '1' then mosi should be tri-stated
+            FOR i IN 0 TO N_SENSORS - 1 LOOP
+                sensor_data(i) <= (OTHERS => '0');
+            END LOOP;
             mosi <= 'Z';
         END IF;
     END PROCESS;
 
     -- Output Data Management
     PROCESS (spi_transfer_done, s_axis_out_aclk, s_axis_out_aresetn)
-        VARIABLE result_index : INTEGER RANGE 0 TO N_SENSORS - 1 := 0;
         VARIABLE zeros : STD_LOGIC_VECTOR(STREAM_WIDTH - MAX_NUMBER_READS * 8 - 1 DOWNTO 0) := (OTHERS => '0');
     BEGIN
         IF s_axis_out_aresetn = '0' THEN
@@ -254,31 +260,64 @@ BEGIN
             s_axis_out_tvalid <= '0';
             s_axis_out_tlast <= '0';
             axis_transfer_done <= '0';
-            result_index := 0;
+            axi_transfer_error <= '0';
+            result_index <= 0;
         ELSIF rising_edge(s_axis_out_aclk) THEN
-            IF spi_transfer_done = '1' AND s_axis_out_tready = '1' AND axis_transfer_done = '0' THEN
+            prev_spi_transfer_done <= spi_transfer_done;
+            -- IF spi_transfer_done = '1' AND axis_transfer_done = '0' THEN
+            -- IF result_index < N_SENSORS THEN
+            --     s_axis_out_tdata <= zeros & sensor_data(result_index);
+            --     s_axis_out_tvalid <= '1';
+            --     axis_transfer_done <= '0';
+            -- ELSE
+            --     -- Transfer to AXIS is done
+            --     s_axis_out_tdata <= (OTHERS => '0');
+            --     s_axis_out_tvalid <= '0';
+            --     result_index <= 0;
+            -- END IF;
+            -- IF result_index = N_SENSORS - 1 THEN
+            --     s_axis_out_tlast <= '1';
+            --     axis_transfer_done <= '1';
+            -- ELSE
+            --     s_axis_out_tlast <= '0';
+            -- END IF;
+            -- IF s_axis_out_tready = '1' THEN
+            --     result_index <= result_index + 1;
+            -- END IF;
+            IF spi_transfer_done = '1' AND axis_transfer_done = '0' THEN
                 IF result_index < N_SENSORS THEN
                     s_axis_out_tdata <= zeros & sensor_data(result_index);
                     s_axis_out_tvalid <= '1';
-                    result_index := result_index + 1;
                     s_axis_out_tlast <= '0';
-                    axis_transfer_done <= '0';
+                    IF s_axis_out_tready = '1' THEN
+                        result_index <= result_index + 1;
+                    END IF;
+                    IF result_index = N_SENSORS - 1 THEN
+                        s_axis_out_tlast <= '1';
+                        axis_transfer_done <= '1';
+                    END IF;
                 ELSE
                     -- Transfer to AXIS is done
                     s_axis_out_tdata <= (OTHERS => '0');
                     s_axis_out_tvalid <= '0';
-                    result_index := 0;
-                    s_axis_out_tlast <= '1';
-                    axis_transfer_done <= '1';
+                    s_axis_out_tlast <= '0';
+                    result_index <= 0;
                 END IF;
                 s_axis_out_tkeep <= (OTHERS => '1');
             ELSIF spi_transfer_done = '0' THEN
                 axis_transfer_done <= '0';
+                s_axis_out_tvalid <= '0';
             ELSE
-                result_index := 0;
+                result_index <= 0;
                 s_axis_out_tdata <= (OTHERS => '0');
                 s_axis_out_tvalid <= '0';
                 s_axis_out_tlast <= '0';
+            END IF;
+
+            IF prev_spi_transfer_done = '1' AND spi_transfer_done = '0' AND axis_transfer_done = '0' THEN
+                axi_transfer_error <= '1';
+            ELSE
+                axi_transfer_error <= '0';
             END IF;
         END IF;
     END PROCESS;
@@ -296,4 +335,5 @@ BEGIN
     END PROCESS;
 
     sck <= spi_clk XOR cpol;
+    xfer_error <= axi_transfer_error;
 END Behavioral;

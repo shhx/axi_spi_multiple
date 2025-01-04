@@ -39,6 +39,8 @@ port(
     csr_status_rx_full_in : in std_logic;
     -- STATUS.RX_EMPTY
     csr_status_rx_empty_in : in std_logic;
+    -- STATUS.AXIS_XFER_ERROR
+    csr_status_axis_xfer_error_in : in std_logic;
 
     -- CLK_DIV.DIV
     csr_clk_div_div_out : out std_logic_vector(15 downto 0);
@@ -119,12 +121,14 @@ signal csr_control_xfer_count_ff : std_logic_vector(3 downto 0);
 signal csr_control_automatic_mode_ff : std_logic;
 
 signal csr_status_rdata : std_logic_vector(31 downto 0);
+signal csr_status_wen : std_logic;
 signal csr_status_ren : std_logic;
 signal csr_status_ren_ff : std_logic;
 signal csr_status_tx_full_ff : std_logic;
 signal csr_status_tx_empty_ff : std_logic;
 signal csr_status_rx_full_ff : std_logic;
 signal csr_status_rx_empty_ff : std_logic;
+signal csr_status_axis_xfer_error_ff : std_logic;
 
 signal csr_clk_div_rdata : std_logic_vector(31 downto 0);
 signal csr_clk_div_wen : std_logic;
@@ -475,8 +479,9 @@ end process;
 -- CSR:
 -- [0x8] - STATUS - SPI Status register
 --------------------------------------------------------------------------------
-csr_status_rdata(31 downto 4) <= (others => '0');
+csr_status_rdata(31 downto 5) <= (others => '0');
 
+csr_status_wen <= wen when (waddr = std_logic_vector(to_unsigned(8, ADDR_W))) else '0'; -- 0x8
 
 csr_status_ren <= ren when (raddr = std_logic_vector(to_unsigned(8, ADDR_W))) else '0'; -- 0x8
 process (clk) begin
@@ -567,6 +572,31 @@ if (rst = '0') then
     csr_status_rx_empty_ff <= '1'; -- 0x1
 else
             csr_status_rx_empty_ff <= csr_status_rx_empty_in;
+end if;
+end if;
+end process;
+
+
+
+-----------------------
+-- Bit field:
+-- STATUS(4) - AXIS_XFER_ERROR - AXI Stream Transfer Error
+-- access: rolh, hardware: i
+-----------------------
+
+csr_status_rdata(4) <= csr_status_axis_xfer_error_ff;
+
+
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_status_axis_xfer_error_ff <= '0'; -- 0x0
+else
+        if (csr_status_ren = '1' and csr_status_ren_ff = '0' and csr_status_axis_xfer_error_ff = '1') then
+            csr_status_axis_xfer_error_ff <= '0';
+         elsif (csr_status_axis_xfer_error_in = '1') then
+            csr_status_axis_xfer_error_ff <= csr_status_axis_xfer_error_in;
+        end if;
 end if;
 end if;
 end process;

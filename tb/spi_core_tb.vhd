@@ -11,7 +11,7 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
     -- Component Declaration for the Unit Under Test (UUT)
     COMPONENT spi_core IS
         GENERIC (
-            N_SENSORS        : INTEGER := 8;  -- Number of sensors
+            N_SENSORS        : INTEGER := 10;  -- Number of sensors
             N_CHIP_SELECTS   : INTEGER := 2;  -- Number of chip selects
             STREAM_WIDTH     : INTEGER := 32; -- Width of the axi stream output
             CS_WAIT_CYCLES   : INTEGER := 5;  -- Number of clock cycles to wait after CS is asserted
@@ -26,6 +26,7 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
             selected_cs      : IN STD_LOGIC_VECTOR(N_CHIP_SELECTS - 1 DOWNTO 0);
             transfer_inhibit : IN STD_LOGIC;
             xfer_count       : IN STD_LOGIC_VECTOR(4 - 1 DOWNTO 0); -- Number of 8 bit transfers
+            xfer_error       : OUT STD_LOGIC;
 
             long_wait_cycles    : IN STD_LOGIC_VECTOR(31 DOWNTO 0); -- Number of clock cycles to wait after CS is de-asserted
             automatic_transfers : IN STD_LOGIC;
@@ -78,19 +79,20 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
     SIGNAL selected_cs : STD_LOGIC_VECTOR(N_CHIP_SELECTS - 1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL transfer_inhibit : STD_LOGIC := '0';
     SIGNAL xfer_count : STD_LOGIC_VECTOR(4 - 1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL xfer_error : STD_LOGIC;
 
     SIGNAL clk : STD_LOGIC := '0';
     SIGNAL rst : STD_LOGIC := '1';
 
     SIGNAL sck : STD_LOGIC;
     SIGNAL cs : STD_LOGIC_VECTOR(N_CHIP_SELECTS - 1 DOWNTO 0) := (OTHERS => '1');
-    SIGNAL miso : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL miso : STD_LOGIC_VECTOR(N_SENSORS - 1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL mosi : STD_LOGIC;
 
     SIGNAL s_axis_out_tdata : STD_LOGIC_VECTOR(STREAM_WIDTH - 1 DOWNTO 0);
     SIGNAL s_axis_out_tkeep : STD_LOGIC_VECTOR(STREAM_WIDTH/8 - 1 DOWNTO 0);
     SIGNAL s_axis_out_tvalid : STD_LOGIC;
-    SIGNAL s_axis_out_tready : STD_LOGIC := '1';
+    SIGNAL s_axis_out_tready : STD_LOGIC := '0';
     SIGNAL s_axis_out_tlast : STD_LOGIC;
     SIGNAL s_axis_aclk : STD_LOGIC := '0';
     SIGNAL s_axis_aresetn : STD_LOGIC := '1';
@@ -113,6 +115,7 @@ BEGIN
         selected_cs      => selected_cs,
         transfer_inhibit => transfer_inhibit,
         xfer_count       => xfer_count,
+        xfer_error       => xfer_error,
 
         long_wait_cycles    => long_wait_cycles,
         automatic_transfers => automatic_transfers,
@@ -171,10 +174,11 @@ BEGIN
         transfer_inhibit <= '1'; -- Allow transfer
         xfer_count <= STD_LOGIC_VECTOR(to_unsigned(1, xfer_count'length)); -- Set number of transfers
         long_wait_cycles <= X"0000_0100"; -- Set long wait cycles
-        automatic_transfers <= '1'; -- Disable automatic transfers
+        automatic_transfers <= '0'; -- Disable automatic transfers
 
         -- Reset UUT
         rst <= '0';
+        s_axis_out_tready <= '1';
         s_axis_aresetn <= '0';
         WAIT FOR 50 ns;
         rst <= '1';
@@ -182,17 +186,17 @@ BEGIN
 
         -- Provide input data
         data_tx <= X"0000_00AA";
-        miso <= B"11_1100_1100"; -- Simulated sensor data
+        miso <= STD_LOGIC_VECTOR(to_unsigned(170, N_SENSORS));
         WAIT FOR CLK_PERIOD * 5;
         transfer_inhibit <= '0'; -- Allow transfer
 
         -- Wait for a few clock cycles
-        -- WAIT FOR CLK_PERIOD * 400;
-        -- transfer_inhibit <= '1'; -- Inhibit transfer
-        -- WAIT FOR CLK_PERIOD * 11;
-        -- transfer_inhibit <= '0'; -- Allow transfer
-        -- WAIT FOR CLK_PERIOD * 800;
-        -- automatic_transfers <= '1'; -- Disable automatic transfers
+        WAIT FOR CLK_PERIOD * 400;
+        transfer_inhibit <= '1'; -- Inhibit transfer
+        WAIT FOR CLK_PERIOD * 11;
+        transfer_inhibit <= '0'; -- Allow transfer
+        WAIT FOR CLK_PERIOD * 800;
+        automatic_transfers <= '1'; -- Disable automatic transfers
         wait for CLK_PERIOD * 1000;
 
         -- Check outputs
