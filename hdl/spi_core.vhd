@@ -46,6 +46,10 @@ ENTITY spi_core IS
         transfer_inhibit : IN STD_LOGIC;
         xfer_count       : IN STD_LOGIC_VECTOR(4 - 1 DOWNTO 0); -- Number of 8 bit transfers
 
+        -- Automatic Transfer mode
+        long_wait_cycles    : IN STD_LOGIC_VECTOR(31 DOWNTO 0); -- Number of clock cycles to wait after CS is de-asserted
+        automatic_transfers : IN STD_LOGIC;
+
         -- Rx/Tx Data
         data_tx  : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
         tx_full  : OUT STD_LOGIC;
@@ -88,6 +92,7 @@ ARCHITECTURE Behavioral OF spi_core IS
     SIGNAL axis_transfer_done : STD_LOGIC := '0';
     SIGNAL bit_count : INTEGER RANGE 0 TO MAX_NUMBER_READS * 8 - 1 := 0;
     SIGNAL bits_to_transfer : INTEGER RANGE 0 TO 8 * MAX_NUMBER_READS := 0;
+    SIGNAL prev_transfer_inhibit : STD_LOGIC := '1';
     -- FSM States
     TYPE fsm_state IS (IDLE, CS_LOW_WAIT, TRANSFER, CS_HIGH_WAIT, LONG_WAIT);
     SIGNAL state : fsm_state := IDLE;
@@ -109,12 +114,16 @@ BEGIN
             chip_select <= '1';
             state <= IDLE;
         ELSIF rising_edge(clk) THEN
+            prev_transfer_inhibit <= transfer_inhibit;
+            IF transfer_inhibit = '1' THEN
+                state <= IDLE;
+            END IF;
             CASE state IS
                 WHEN IDLE =>
                     chip_select <= '1';
                     spi_clk <= '0';
                     clk_count <= 0;
-                    IF transfer_inhibit = '0' AND spi_transfer_done = '0' THEN
+                    IF (prev_transfer_inhibit = '1' AND transfer_inhibit = '0') OR (automatic_transfers = '1' AND transfer_inhibit = '0') THEN
                         wait_count <= 0;
                         state <= CS_LOW_WAIT;
                     END IF;
@@ -150,6 +159,21 @@ BEGIN
                 WHEN CS_HIGH_WAIT =>
                     IF wait_count = CS_WAIT_CYCLES THEN
                         wait_count <= 0;
+                        IF automatic_transfers = '1' THEN
+                            state <= LONG_WAIT;
+                        ELSE
+                            state <= IDLE;
+                        END IF;
+                    ELSE
+                        wait_count <= wait_count + 1;
+                    END IF;
+
+                WHEN LONG_WAIT =>
+                    chip_select <= '1';
+                    spi_clk <= '0';
+                    clk_count <= 0;
+                    IF wait_count = to_integer(unsigned(long_wait_cycles)) THEN
+                        wait_count <= 0;
                         state <= IDLE;
                     ELSE
                         wait_count <= wait_count + 1;
@@ -162,7 +186,7 @@ BEGIN
     END PROCESS;
 
     -- SPI Transfer FSM
-    PROCESS (spi_sample_clk, rst, transfer_inhibit)
+    PROCESS (spi_sample_clk, rst, state, automatic_transfers)
     BEGIN
         IF rst = '0' THEN
             tx_empty <= '1';
@@ -171,21 +195,25 @@ BEGIN
             rx_full <= '0';
             bit_count <= 0;
             spi_transfer_done <= '0';
-        ELSIF state = TRANSFER THEN
-            IF rising_edge(spi_sample_clk) THEN
-                -- Increment bit count
-                IF bit_count = bits_to_transfer - 1 THEN
-                    spi_transfer_done <= '1';
-                    bit_count <= 0;
-                ELSE
-                    bit_count <= bit_count + 1;
+        ELSE
+            CASE state IS
+                WHEN TRANSFER =>
+                    IF rising_edge(spi_sample_clk) THEN
+                        -- Increment bit count
+                        IF bit_count = bits_to_transfer - 1 THEN
+                            spi_transfer_done <= '1';
+                            bit_count <= 0;
+                        ELSE
+                            bit_count <= bit_count + 1;
+                            spi_transfer_done <= '0';
+                        END IF;
+                    END IF;
+                WHEN CS_LOW_WAIT =>
                     spi_transfer_done <= '0';
-                END IF;
-            END IF;
-        END IF;
-        IF transfer_inhibit = '1' THEN
-            spi_transfer_done <= '0';
-            -- bit_count <= 0;
+                    bit_count <= 0;
+                WHEN OTHERS =>
+                    bit_count <= 0;
+            END CASE;
         END IF;
     END PROCESS;
 
@@ -233,18 +261,15 @@ BEGIN
                     s_axis_out_tdata <= zeros & sensor_data(result_index);
                     s_axis_out_tvalid <= '1';
                     result_index := result_index + 1;
+                    s_axis_out_tlast <= '0';
+                    axis_transfer_done <= '0';
                 ELSE
                     -- Transfer to AXIS is done
                     s_axis_out_tdata <= (OTHERS => '0');
                     s_axis_out_tvalid <= '0';
                     result_index := 0;
-                END IF;
-                IF result_index = N_SENSORS - 1 THEN
                     s_axis_out_tlast <= '1';
                     axis_transfer_done <= '1';
-                ELSE
-                    s_axis_out_tlast <= '0';
-                    axis_transfer_done <= '0';
                 END IF;
                 s_axis_out_tkeep <= (OTHERS => '1');
             ELSIF spi_transfer_done = '0' THEN

@@ -28,6 +28,8 @@ port(
     csr_control_lsb_first_out : out std_logic;
     -- CONTROL.XFER_COUNT
     csr_control_xfer_count_out : out std_logic_vector(3 downto 0);
+    -- CONTROL.AUTOMATIC_MODE
+    csr_control_automatic_mode_out : out std_logic;
 
     -- STATUS.TX_FULL
     csr_status_tx_full_in : in std_logic;
@@ -46,6 +48,9 @@ port(
 
     -- SLAVE_SELECT.SS
     csr_slave_select_ss_out : out std_logic_vector(31 downto 0);
+
+    -- WAIT_CYCLES.CYCLES
+    csr_wait_cycles_cycles_out : out std_logic_vector(31 downto 0);
 
     -- AXI-Lite
     axil_awaddr   : in  std_logic_vector(ADDR_W-1 downto 0);
@@ -111,6 +116,7 @@ signal csr_control_cpha_ff : std_logic;
 signal csr_control_trans_inhibit_ff : std_logic;
 signal csr_control_lsb_first_ff : std_logic;
 signal csr_control_xfer_count_ff : std_logic_vector(3 downto 0);
+signal csr_control_automatic_mode_ff : std_logic;
 
 signal csr_status_rdata : std_logic_vector(31 downto 0);
 signal csr_status_ren : std_logic;
@@ -137,6 +143,12 @@ signal csr_slave_select_wen : std_logic;
 signal csr_slave_select_ren : std_logic;
 signal csr_slave_select_ren_ff : std_logic;
 signal csr_slave_select_ss_ff : std_logic_vector(31 downto 0);
+
+signal csr_wait_cycles_rdata : std_logic_vector(31 downto 0);
+signal csr_wait_cycles_wen : std_logic;
+signal csr_wait_cycles_ren : std_logic;
+signal csr_wait_cycles_ren_ff : std_logic;
+signal csr_wait_cycles_cycles_ff : std_logic_vector(31 downto 0);
 
 signal rdata_ff : std_logic_vector(31 downto 0);
 signal rvalid_ff : std_logic;
@@ -276,7 +288,7 @@ end process;
 -- [0x4] - CONTROL - SPI Control register
 --------------------------------------------------------------------------------
 csr_control_rdata(7 downto 2) <= (others => '0');
-csr_control_rdata(31 downto 14) <= (others => '0');
+csr_control_rdata(31 downto 15) <= (others => '0');
 
 csr_control_wen <= wen when (waddr = std_logic_vector(to_unsigned(4, ADDR_W))) else '0'; -- 0x4
 
@@ -424,6 +436,34 @@ else
             end if;
         else
             csr_control_xfer_count_ff <= csr_control_xfer_count_ff;
+        end if;
+end if;
+end if;
+end process;
+
+
+
+-----------------------
+-- Bit field:
+-- CONTROL(14) - AUTOMATIC_MODE - Automatic Mode
+-- access: rw, hardware: o
+-----------------------
+
+csr_control_rdata(14) <= csr_control_automatic_mode_ff;
+
+csr_control_automatic_mode_out <= csr_control_automatic_mode_ff;
+
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_control_automatic_mode_ff <= '0'; -- 0x0
+else
+        if (csr_control_wen = '1') then
+            if (wstrb(1) = '1') then
+                csr_control_automatic_mode_ff <= wdata(14);
+            end if;
+        else
+            csr_control_automatic_mode_ff <= csr_control_automatic_mode_ff;
         end if;
 end if;
 end if;
@@ -694,6 +734,61 @@ end process;
 
 
 --------------------------------------------------------------------------------
+-- CSR:
+-- [0x18] - WAIT_CYCLES - Wait Cycles Register
+--------------------------------------------------------------------------------
+
+csr_wait_cycles_wen <= wen when (waddr = std_logic_vector(to_unsigned(24, ADDR_W))) else '0'; -- 0x18
+
+csr_wait_cycles_ren <= ren when (raddr = std_logic_vector(to_unsigned(24, ADDR_W))) else '0'; -- 0x18
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_wait_cycles_ren_ff <= '0'; -- 0x0
+else
+        csr_wait_cycles_ren_ff <= csr_wait_cycles_ren;
+end if;
+end if;
+end process;
+
+-----------------------
+-- Bit field:
+-- WAIT_CYCLES(31 downto 0) - CYCLES - Number of cycles to wait
+-- access: rw, hardware: o
+-----------------------
+
+csr_wait_cycles_rdata(31 downto 0) <= csr_wait_cycles_cycles_ff;
+
+csr_wait_cycles_cycles_out <= csr_wait_cycles_cycles_ff;
+
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_wait_cycles_cycles_ff <= "00000000000000000000000000000000"; -- 0x0
+else
+        if (csr_wait_cycles_wen = '1') then
+            if (wstrb(0) = '1') then
+                csr_wait_cycles_cycles_ff(7 downto 0) <= wdata(7 downto 0);
+            end if;
+            if (wstrb(1) = '1') then
+                csr_wait_cycles_cycles_ff(15 downto 8) <= wdata(15 downto 8);
+            end if;
+            if (wstrb(2) = '1') then
+                csr_wait_cycles_cycles_ff(23 downto 16) <= wdata(23 downto 16);
+            end if;
+            if (wstrb(3) = '1') then
+                csr_wait_cycles_cycles_ff(31 downto 24) <= wdata(31 downto 24);
+            end if;
+        else
+            csr_wait_cycles_cycles_ff <= csr_wait_cycles_cycles_ff;
+        end if;
+end if;
+end if;
+end process;
+
+
+
+--------------------------------------------------------------------------------
 -- Write ready
 --------------------------------------------------------------------------------
 wready <= '1';
@@ -719,6 +814,8 @@ else
             rdata_ff <= csr_tx_data_rdata;
         elsif raddr = std_logic_vector(to_unsigned(20, ADDR_W)) then -- 0x14
             rdata_ff <= csr_slave_select_rdata;
+        elsif raddr = std_logic_vector(to_unsigned(24, ADDR_W)) then -- 0x18
+            rdata_ff <= csr_wait_cycles_rdata;
         else 
             rdata_ff <= "00000000000000000000000000000000"; -- 0x0
         end if;

@@ -7,6 +7,7 @@ ENTITY spi_top IS
         ADDR_W           : INTEGER := 10;
         DATA_W           : INTEGER := 32;
         STRB_W           : INTEGER := 4;
+        
         N_SENSORS        : INTEGER := 10;
         N_CHIP_SELECTS   : INTEGER := 1;
         CS_WAIT_CYCLES   : INTEGER := 5; -- Number of clock cycles to wait after CS is asserted
@@ -65,6 +66,7 @@ ARCHITECTURE rtl OF spi_top IS
     SIGNAL csr_control_trans_inhibit_out : STD_LOGIC;
     SIGNAL csr_control_lsb_first_out : STD_LOGIC;
     SIGNAL csr_control_xfer_count_out : STD_LOGIC_VECTOR(4 - 1 DOWNTO 0);
+    SIGNAL csr_control_automatic_mode_out : STD_LOGIC;
 
     SIGNAL csr_status_tx_full_in : STD_LOGIC;
     SIGNAL csr_status_tx_empty_in : STD_LOGIC;
@@ -74,7 +76,7 @@ ARCHITECTURE rtl OF spi_top IS
     SIGNAL csr_tx_data_data_out : STD_LOGIC_VECTOR(31 DOWNTO 0);
     SIGNAL csr_rx_data_data_in : STD_LOGIC_VECTOR(31 DOWNTO 0);
     SIGNAL csr_slave_select_ss_out : STD_LOGIC_VECTOR(31 DOWNTO 0);
-
+    SIGNAL csr_wait_cycles_cycles_out : STD_LOGIC_VECTOR(31 DOWNTO 0);
 BEGIN
 
     -- Instantiate SPI Core
@@ -100,6 +102,9 @@ BEGIN
             selected_cs      => csr_slave_select_ss_out(N_CHIP_SELECTS - 1 DOWNTO 0),
             transfer_inhibit => csr_control_trans_inhibit_out,
             xfer_count       => csr_control_xfer_count_out,
+
+            long_wait_cycles    => csr_wait_cycles_cycles_out,
+            automatic_transfers => csr_control_automatic_mode_out,
 
             data_tx  => csr_tx_data_data_out,
             tx_full  => csr_status_tx_full_in,
@@ -128,12 +133,13 @@ BEGIN
             rst => s_axi_lite_aresetn,
 
             -- SPI Core Ports
-            csr_reset_reset_out           => csr_reset_reset_out,
-            csr_control_cpol_out          => csr_control_cpol_out,
-            csr_control_cpha_out          => csr_control_cpha_out,
-            csr_control_trans_inhibit_out => csr_control_trans_inhibit_out,
-            csr_control_lsb_first_out     => csr_control_lsb_first_out,
-            csr_control_xfer_count_out    => csr_control_xfer_count_out,
+            csr_reset_reset_out            => csr_reset_reset_out,
+            csr_control_cpol_out           => csr_control_cpol_out,
+            csr_control_cpha_out           => csr_control_cpha_out,
+            csr_control_trans_inhibit_out  => csr_control_trans_inhibit_out,
+            csr_control_lsb_first_out      => csr_control_lsb_first_out,
+            csr_control_xfer_count_out     => csr_control_xfer_count_out,
+            csr_control_automatic_mode_out => csr_control_automatic_mode_out,
 
             csr_status_tx_full_in   => csr_status_tx_full_in,
             csr_status_tx_empty_in  => csr_status_tx_empty_in,
@@ -142,6 +148,8 @@ BEGIN
             csr_clk_div_div_out     => csr_clk_div_div_out,
             csr_tx_data_data_out    => csr_tx_data_data_out,
             csr_slave_select_ss_out => csr_slave_select_ss_out,
+
+            csr_wait_cycles_cycles_out => csr_wait_cycles_cycles_out,
 
             -- AXI-Lite Ports
             axil_awaddr  => s_axi_lite_awaddr,

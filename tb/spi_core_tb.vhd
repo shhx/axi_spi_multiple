@@ -27,6 +27,9 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
             transfer_inhibit : IN STD_LOGIC;
             xfer_count       : IN STD_LOGIC_VECTOR(4 - 1 DOWNTO 0); -- Number of 8 bit transfers
 
+            long_wait_cycles    : IN STD_LOGIC_VECTOR(31 DOWNTO 0); -- Number of clock cycles to wait after CS is de-asserted
+            automatic_transfers : IN STD_LOGIC;
+
             -- Rx/Tx Data
             data_tx  : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
             tx_full  : OUT STD_LOGIC;
@@ -63,6 +66,9 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
     SIGNAL cpol : STD_LOGIC := '0';
     SIGNAL clk_div : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
     SIGNAL lsb_first : STD_LOGIC := '0';
+
+    SIGNAL long_wait_cycles : STD_LOGIC_VECTOR(31 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL automatic_transfers : STD_LOGIC := '0';
 
     SIGNAL data_tx : STD_LOGIC_VECTOR(31 DOWNTO 0) := (OTHERS => '0');
     SIGNAL tx_full : STD_LOGIC;
@@ -107,6 +113,9 @@ BEGIN
         selected_cs      => selected_cs,
         transfer_inhibit => transfer_inhibit,
         xfer_count       => xfer_count,
+
+        long_wait_cycles    => long_wait_cycles,
+        automatic_transfers => automatic_transfers,
 
         data_tx  => data_tx,
         tx_full  => tx_full,
@@ -161,6 +170,8 @@ BEGIN
         selected_cs <= B"10"; -- Select CS0
         transfer_inhibit <= '1'; -- Allow transfer
         xfer_count <= STD_LOGIC_VECTOR(to_unsigned(1, xfer_count'length)); -- Set number of transfers
+        long_wait_cycles <= X"0000_0100"; -- Set long wait cycles
+        automatic_transfers <= '1'; -- Disable automatic transfers
 
         -- Reset UUT
         rst <= '0';
@@ -176,12 +187,13 @@ BEGIN
         transfer_inhibit <= '0'; -- Allow transfer
 
         -- Wait for a few clock cycles
-        WAIT FOR CLK_PERIOD * 800;
-        cpha <= '1'; -- Set CPHA
-        transfer_inhibit <= '1'; -- Inhibit transfer
-        WAIT FOR CLK_PERIOD * 5;
-        transfer_inhibit <= '0'; -- Allow transfer
-        WAIT FOR CLK_PERIOD * 800;
+        -- WAIT FOR CLK_PERIOD * 400;
+        -- transfer_inhibit <= '1'; -- Inhibit transfer
+        -- WAIT FOR CLK_PERIOD * 11;
+        -- transfer_inhibit <= '0'; -- Allow transfer
+        -- WAIT FOR CLK_PERIOD * 800;
+        -- automatic_transfers <= '1'; -- Disable automatic transfers
+        wait for CLK_PERIOD * 1000;
 
         -- Check outputs
         --ASSERT cs = '0' REPORT "Chip select did not assert correctly";

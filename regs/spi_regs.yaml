@@ -49,6 +49,13 @@ regmap:
         lsb: 10
         access: rw
         hardware: o
+    -   name: AUTOMATIC_MODE
+        description: Automatic Mode
+        reset: 0
+        width: 1
+        lsb: 14
+        access: rw
+        hardware: o 
 
 -   name: status
     description: SPI Status register
@@ -109,6 +116,17 @@ regmap:
     bitfields:
     -   name: SS
         description: Slave Select
+        reset: 0
+        width: 32
+        lsb: 0
+        access: rw
+        hardware: o
+
+-   name: wait_cycles
+    description: Wait Cycles Register
+    bitfields:
+    -   name: CYCLES
+        description: Number of cycles to wait
         reset: 0
         width: 32
         lsb: 0
