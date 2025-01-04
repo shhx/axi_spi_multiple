@@ -20,7 +20,7 @@ generator = Vhdl
 
 [c_header]
 path = sw/spi_regs.h
-prefix = CSR
+prefix = 
 generator = CHeader
 
 [md_doc]

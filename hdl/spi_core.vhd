@@ -264,26 +264,6 @@ BEGIN
             result_index <= 0;
         ELSIF rising_edge(s_axis_out_aclk) THEN
             prev_spi_transfer_done <= spi_transfer_done;
-            -- IF spi_transfer_done = '1' AND axis_transfer_done = '0' THEN
-            -- IF result_index < N_SENSORS THEN
-            --     s_axis_out_tdata <= zeros & sensor_data(result_index);
-            --     s_axis_out_tvalid <= '1';
-            --     axis_transfer_done <= '0';
-            -- ELSE
-            --     -- Transfer to AXIS is done
-            --     s_axis_out_tdata <= (OTHERS => '0');
-            --     s_axis_out_tvalid <= '0';
-            --     result_index <= 0;
-            -- END IF;
-            -- IF result_index = N_SENSORS - 1 THEN
-            --     s_axis_out_tlast <= '1';
-            --     axis_transfer_done <= '1';
-            -- ELSE
-            --     s_axis_out_tlast <= '0';
-            -- END IF;
-            -- IF s_axis_out_tready = '1' THEN
-            --     result_index <= result_index + 1;
-            -- END IF;
             IF spi_transfer_done = '1' AND axis_transfer_done = '0' THEN
                 IF result_index < N_SENSORS THEN
                     s_axis_out_tdata <= zeros & sensor_data(result_index);

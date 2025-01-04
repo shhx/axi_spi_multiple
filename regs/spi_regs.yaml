@@ -8,7 +8,7 @@ regmap:
         reset: 0
         width: 1
         lsb: 0
-        access: rw1s # Read and Write 1 to Clear. The field can be read, and when 1 is written field is cleared.
+        access: rw # Write 1 to reset.
         hardware: o
 
 -   name: control
@@ -89,11 +89,11 @@ regmap:
         access: ro
         hardware: i
     -   name: AXIS_XFER_ERROR
-        description: AXI Stream Transfer Error
+        description: AXI Stream Transfer Error. Write to clear.
         reset: 0
         width: 1
         lsb: 4
-        access: rolh
+        access: rwlh
         hardware: i
 
 -   name: clk_div
