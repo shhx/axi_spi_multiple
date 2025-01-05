@@ -122,11 +122,7 @@ BEGIN
         VARIABLE SPI_CLK_CYCLES : INTEGER := 0;
         VARIABLE SPI_CLK_CYCLES_HALF : INTEGER := SPI_CLK_CYCLES / 2;
     BEGIN
-        IF cpha = '1' THEN
-            last_bit <= bits_to_transfer * 2 ;
-        ELSE
-            last_bit <= bits_to_transfer * 2;
-        END IF;
+        last_bit <= bits_to_transfer * 2;
         SPI_CLK_CYCLES := to_integer(unsigned(clk_div));
         SPI_CLK_CYCLES_HALF := SPI_CLK_CYCLES / 2;
         IF rst = '0' THEN
@@ -178,7 +174,7 @@ BEGIN
                         END IF;
 
                         -- Toggle sclk
-                        IF spi_clk_toggles < bits_to_transfer * 2 THEN
+                        IF spi_clk_toggles < last_bit THEN
                             spi_clk <= NOT spi_clk;
                         END IF;
 
@@ -229,42 +225,51 @@ BEGIN
     END PROCESS;
 
     -- SPI Data Management
-    PROCESS (rst, chip_select, mosi_count, miso_count, state)
+    -- Process for MOSI count
+    PROCESS (rst, chip_select, mosi_count, state)
     BEGIN
         IF rst = '0' THEN
             mosi <= 'Z';
-            FOR i IN 0 TO N_SENSORS - 1 LOOP
-                sensor_data(i) <= (OTHERS => '0');
-            END LOOP;
         ELSIF chip_select = '0' THEN
             IF state = TRANSFER THEN
-                IF spi_clk_toggles = bits_to_transfer * 2 + 1 THEN
+                IF spi_clk_toggles = last_bit + 1 THEN
                     mosi <= 'Z';
                 ELSE
                     IF lsb_first = '1' THEN
                         mosi <= data_tx(mosi_count);
-                        IF miso_count > 0 THEN
-                            FOR i IN 0 TO N_SENSORS - 1 LOOP
-                                sensor_data(i)(miso_count - 1) <= miso(i);
-                            END LOOP;
-                        END IF;
                     ELSE
                         mosi <= data_tx(bits_to_transfer - mosi_count - 1);
-                        IF miso_count > 0 THEN
-                            FOR i IN 0 TO N_SENSORS - 1 LOOP
-                                sensor_data(i)(bits_to_transfer - miso_count) <= miso(i);
-                            END LOOP;
-                        END IF;
                     END IF;
                 END IF;
             END IF;
-        ELSIF state = CS_LOW_WAIT THEN
-            -- if chip_select = '1' then mosi should be tri-stated
+        ELSE
+            mosi <= 'Z';
+        END IF;
+    END PROCESS;
+
+    -- Process for MISO count
+    PROCESS (rst, miso_count, state)
+    BEGIN
+        IF rst = '0' THEN
             FOR i IN 0 TO N_SENSORS - 1 LOOP
                 sensor_data(i) <= (OTHERS => '0');
             END LOOP;
-        ELSE
-            mosi <= 'Z';
+        ELSIF state = TRANSFER THEN
+            IF miso_count > 0 THEN
+                IF lsb_first = '1' THEN
+                    FOR i IN 0 TO N_SENSORS - 1 LOOP
+                        sensor_data(i)(miso_count - 1) <= miso(i);
+                    END LOOP;
+                ELSE
+                    FOR i IN 0 TO N_SENSORS - 1 LOOP
+                        sensor_data(i)(bits_to_transfer - miso_count) <= miso(i);
+                    END LOOP;
+                END IF;
+            END IF;
+        ELSIF state = CS_LOW_WAIT THEN
+            FOR i IN 0 TO N_SENSORS - 1 LOOP
+                sensor_data(i) <= (OTHERS => '0');
+            END LOOP;
         END IF;
     END PROCESS;
 
