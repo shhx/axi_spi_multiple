@@ -82,40 +82,57 @@ ARCHITECTURE Behavioral OF spi_core IS
 
     -- Create array to hold all sensor data
     TYPE data_array IS ARRAY(0 TO N_SENSORS - 1) OF STD_LOGIC_VECTOR(MAX_NUMBER_READS * 8 - 1 DOWNTO 0);
-    SIGNAL sensor_data : data_array;
+
+    -- SPI Clock signals
     SIGNAL clk_count : INTEGER RANGE 0 TO 2 ** 16 - 1 := 0;
     SIGNAL wait_count : INTEGER RANGE 0 TO 2 ** 16 - 1 := 0;
     SIGNAL spi_clk : STD_LOGIC := '0';
-    SIGNAL spi_sample_clk : STD_LOGIC := '0';
-    SIGNAL shift_reg_tx : STD_LOGIC_VECTOR(MAX_NUMBER_READS * 8 - 1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL spi_clk_toggles : INTEGER RANGE 0 TO MAX_NUMBER_READS * 8 - 1 := 0;
+    SIGNAL bits_to_transfer : INTEGER RANGE 0 TO 8 * MAX_NUMBER_READS := 0;
+    SIGNAL last_bit : INTEGER RANGE 0 TO 8 * MAX_NUMBER_READS := 0;
     SIGNAL chip_select : STD_LOGIC := '1';
+    SIGNAL prev_transfer_inhibit : STD_LOGIC := '1';
+    SIGNAL receive_transmit : STD_LOGIC := '0'; --'1' for tx, '0' for rx 
+    SIGNAL mosi_ff : STD_LOGIC := '0';
+
+    -- SPI Data signals
+    SIGNAL sensor_data : data_array;
     SIGNAL spi_transfer_done : STD_LOGIC := '0';
+    SIGNAL mosi_count : INTEGER RANGE 0 TO 8 * MAX_NUMBER_READS := 0;
+    SIGNAL miso_count : INTEGER RANGE 0 TO 8 * MAX_NUMBER_READS := 0;
+
+    -- Axi Stream signals
+    SIGNAL result_index : INTEGER RANGE 0 TO N_SENSORS - 1 := 0;
     SIGNAL prev_spi_transfer_done : STD_LOGIC := '0';
     SIGNAL axis_transfer_done : STD_LOGIC := '0';
-    SIGNAL bit_count : INTEGER RANGE 0 TO MAX_NUMBER_READS * 8 - 1 := 0;
-    SIGNAL bits_to_transfer : INTEGER RANGE 0 TO 8 * MAX_NUMBER_READS := 0;
-    SIGNAL prev_transfer_inhibit : STD_LOGIC := '1';
     SIGNAL axi_transfer_error : STD_LOGIC := '0';
-    SIGNAL result_index : INTEGER RANGE 0 TO N_SENSORS - 1 := 0;
+
     -- FSM States
     TYPE fsm_state IS (IDLE, CS_LOW_WAIT, TRANSFER, CS_HIGH_WAIT, LONG_WAIT);
     SIGNAL state : fsm_state := IDLE;
 BEGIN
-    -- SPI Clock Generation FSM
     bits_to_transfer <= to_integer(unsigned(xfer_count)) * 8;
 
+    sck <= spi_clk;
+    xfer_error <= axi_transfer_error;
+    rx_full <= spi_transfer_done AND NOT axis_transfer_done;
+
+    -- SPI Clock Generation FSM
     PROCESS (clk, rst)
         VARIABLE SPI_CLK_CYCLES : INTEGER := 0;
         VARIABLE SPI_CLK_CYCLES_HALF : INTEGER := SPI_CLK_CYCLES / 2;
     BEGIN
+        IF cpha = '1' THEN
+            last_bit <= bits_to_transfer * 2 ;
+        ELSE
+            last_bit <= bits_to_transfer * 2;
+        END IF;
         SPI_CLK_CYCLES := to_integer(unsigned(clk_div));
         SPI_CLK_CYCLES_HALF := SPI_CLK_CYCLES / 2;
         IF rst = '0' THEN
-            clk_count <= 0;
             wait_count <= 0;
-            spi_clk <= '0';
-            spi_sample_clk <= '0';
-            chip_select <= '1';
+            spi_clk_toggles <= 0;
+            spi_transfer_done <= '0';
             state <= IDLE;
         ELSIF rising_edge(clk) THEN
             prev_transfer_inhibit <= transfer_inhibit;
@@ -125,8 +142,13 @@ BEGIN
             CASE state IS
                 WHEN IDLE =>
                     chip_select <= '1';
-                    spi_clk <= '0';
+                    mosi <= 'Z';
+                    spi_clk <= cpol;
+                    spi_clk_toggles <= 0;
+                    receive_transmit <= cpha;
                     clk_count <= 0;
+                    mosi_count <= 0;
+                    miso_count <= 0;
                     IF (prev_transfer_inhibit = '1' AND transfer_inhibit = '0') OR (automatic_transfers = '1' AND transfer_inhibit = '0') THEN
                         wait_count <= 0;
                         state <= CS_LOW_WAIT;
@@ -134,6 +156,7 @@ BEGIN
 
                 WHEN CS_LOW_WAIT =>
                     chip_select <= '0';
+                    spi_transfer_done <= '0';
                     IF wait_count = CS_WAIT_CYCLES THEN
                         wait_count <= 0;
                         state <= TRANSFER;
@@ -142,22 +165,38 @@ BEGIN
                     END IF;
 
                 WHEN TRANSFER =>
-                    IF clk_count = SPI_CLK_CYCLES_HALF AND cpha = '1' THEN
-                        spi_sample_clk <= NOT spi_sample_clk;
-                    ELSIF clk_count = SPI_CLK_CYCLES AND cpha = '0' THEN
-                        spi_sample_clk <= NOT spi_sample_clk;
-                    END IF;
-
-                    IF clk_count = SPI_CLK_CYCLES THEN
-                        spi_clk <= NOT spi_clk;
+                    IF clk_count = SPI_CLK_CYCLES - 1 THEN
                         clk_count <= 0;
+                        receive_transmit <= NOT receive_transmit;
+                        IF spi_clk_toggles = last_bit THEN
+                            spi_clk_toggles <= 0;
+                            spi_transfer_done <= '1';
+                            state <= CS_HIGH_WAIT;
+                        ELSE
+                            spi_clk_toggles <= spi_clk_toggles + 1;
+                            spi_transfer_done <= '0';
+                        END IF;
+
+                        -- Toggle sclk
+                        IF spi_clk_toggles < bits_to_transfer * 2 THEN
+                            spi_clk <= NOT spi_clk;
+                        END IF;
+
+                        -- Receive miso
+                        IF receive_transmit = '0' AND spi_clk_toggles < last_bit THEN
+                            miso_count <= miso_count + 1;
+                        END IF;
+
+                        -- Transmit mosi
+                        IF (receive_transmit = '1' AND spi_clk_toggles < last_bit AND mosi_count < bits_to_transfer - 1) THEN
+                            -- We need to count a spi_clk_toggle later in case of CPHA = 1
+                            IF NOT (cpha = '1' AND spi_clk_toggles = 0) THEN
+                                mosi_count <= mosi_count + 1;
+                            END IF;
+                        END IF;
+                        -- END IF;
                     ELSE
                         clk_count <= clk_count + 1;
-                    END IF;
-
-                    IF spi_transfer_done = '1' THEN
-                        wait_count <= 0;
-                        state <= CS_HIGH_WAIT;
                     END IF;
 
                 WHEN CS_HIGH_WAIT =>
@@ -189,40 +228,8 @@ BEGIN
         END IF;
     END PROCESS;
 
-    -- SPI Transfer FSM
-    PROCESS (spi_sample_clk, rst, state, automatic_transfers)
-    BEGIN
-        IF rst = '0' THEN
-            tx_empty <= '1';
-            tx_full <= '0';
-            rx_empty <= '1';
-            rx_full <= '0';
-            bit_count <= 0;
-            spi_transfer_done <= '0';
-        ELSE
-            CASE state IS
-                WHEN TRANSFER =>
-                    IF rising_edge(spi_sample_clk) THEN
-                        -- Increment bit count
-                        IF bit_count = bits_to_transfer - 1 THEN
-                            spi_transfer_done <= '1';
-                            bit_count <= 0;
-                        ELSE
-                            bit_count <= bit_count + 1;
-                            spi_transfer_done <= '0';
-                        END IF;
-                    END IF;
-                WHEN CS_LOW_WAIT =>
-                    spi_transfer_done <= '0';
-                    bit_count <= 0;
-                WHEN OTHERS =>
-                    bit_count <= 0;
-            END CASE;
-        END IF;
-    END PROCESS;
-
     -- SPI Data Management
-    PROCESS (rst, chip_select, lsb_first, bit_count, miso, data_tx)
+    PROCESS (rst, chip_select, mosi_count, miso_count, state)
     BEGIN
         IF rst = '0' THEN
             mosi <= 'Z';
@@ -230,22 +237,33 @@ BEGIN
                 sensor_data(i) <= (OTHERS => '0');
             END LOOP;
         ELSIF chip_select = '0' THEN
-            IF lsb_first = '1' THEN
-                mosi <= data_tx(bit_count);
-                FOR i IN 0 TO N_SENSORS - 1 LOOP
-                    sensor_data(i)(bit_count) <= miso(i);
-                END LOOP;
-            ELSE
-                mosi <= data_tx(bits_to_transfer - 1 - bit_count);
-                FOR i IN 0 TO N_SENSORS - 1 LOOP
-                    sensor_data(i)(bits_to_transfer - 1 - bit_count) <= miso(i);
-                END LOOP;
+            IF state = TRANSFER THEN
+                IF spi_clk_toggles = bits_to_transfer * 2 + 1 THEN
+                    mosi <= 'Z';
+                ELSE
+                    IF lsb_first = '1' THEN
+                        mosi <= data_tx(mosi_count);
+                        IF miso_count > 0 THEN
+                            FOR i IN 0 TO N_SENSORS - 1 LOOP
+                                sensor_data(i)(miso_count - 1) <= miso(i);
+                            END LOOP;
+                        END IF;
+                    ELSE
+                        mosi <= data_tx(bits_to_transfer - mosi_count - 1);
+                        IF miso_count > 0 THEN
+                            FOR i IN 0 TO N_SENSORS - 1 LOOP
+                                sensor_data(i)(bits_to_transfer - miso_count) <= miso(i);
+                            END LOOP;
+                        END IF;
+                    END IF;
+                END IF;
             END IF;
-        ELSE
+        ELSIF state = CS_LOW_WAIT THEN
             -- if chip_select = '1' then mosi should be tri-stated
             FOR i IN 0 TO N_SENSORS - 1 LOOP
                 sensor_data(i) <= (OTHERS => '0');
             END LOOP;
+        ELSE
             mosi <= 'Z';
         END IF;
     END PROCESS;
@@ -314,6 +332,4 @@ BEGIN
         END LOOP;
     END PROCESS;
 
-    sck <= spi_clk XOR cpol;
-    xfer_error <= axi_transfer_error;
 END Behavioral;

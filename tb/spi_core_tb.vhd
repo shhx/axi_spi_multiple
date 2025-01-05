@@ -63,6 +63,7 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
     CONSTANT N_SENSORS : INTEGER := 10;
     CONSTANT N_CHIP_SELECTS : INTEGER := 2;
     CONSTANT STREAM_WIDTH : INTEGER := 32;
+    CONSTANT CLK_DIVIDER : INTEGER := 10;
     SIGNAL cpha : STD_LOGIC := '0';
     SIGNAL cpol : STD_LOGIC := '0';
     SIGNAL clk_div : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
@@ -166,7 +167,7 @@ BEGIN
     BEGIN
 
         -- Configure SPI parameters
-        clk_div <= X"000B"; -- Set clock divider
+        clk_div <= STD_LOGIC_VECTOR(to_unsigned(CLK_DIVIDER, clk_div'length)); -- Set clock divider
         cpha <= '0'; -- Set CPHA
         cpol <= '0'; -- Set CPOL
         lsb_first <= '0'; -- MSB first
@@ -178,30 +179,58 @@ BEGIN
 
         -- Reset UUT
         rst <= '0';
-        s_axis_out_tready <= '1';
+        s_axis_out_tready <= '0';
         s_axis_aresetn <= '0';
-        WAIT FOR 50 ns;
+        WAIT FOR CLK_PERIOD * 5;
         rst <= '1';
         s_axis_aresetn <= '1';
 
         -- Provide input data
         data_tx <= X"0000_00AA";
-        miso <= STD_LOGIC_VECTOR(to_unsigned(170, N_SENSORS));
+        miso <= (OTHERS => '1');
         WAIT FOR CLK_PERIOD * 5;
         transfer_inhibit <= '0'; -- Allow transfer
+        wait for 165 ns;
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER;
+        miso <= (OTHERS => '1');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '0');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '1');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '0');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '1');
 
-        -- Wait for a few clock cycles
+
         WAIT FOR CLK_PERIOD * 400;
+
+        -- s_axis_out_tready <= '0';
+        -- WAIT FOR CLK_PERIOD * 500;
+        -- s_axis_out_tready <= '1';
+        -- wait for CLK_PERIOD * 2;
+        -- s_axis_out_tready <= '0';
+        -- WAIT FOR CLK_PERIOD * 50;
+        -- s_axis_out_tready <= '1';
+
+        cpha <= '1'; -- Set CPHA
         transfer_inhibit <= '1'; -- Inhibit transfer
-        WAIT FOR CLK_PERIOD * 11;
+        WAIT FOR CLK_PERIOD * 10;
         transfer_inhibit <= '0'; -- Allow transfer
-        WAIT FOR CLK_PERIOD * 800;
+        wait for 165 ns;
+        miso <= (OTHERS => '1');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '0');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '1');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '0');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '1');
+
+        WAIT FOR CLK_PERIOD * 400;
         automatic_transfers <= '1'; -- Disable automatic transfers
         wait for CLK_PERIOD * 1000;
-
-        -- Check outputs
-        --ASSERT cs = '0' REPORT "Chip select did not assert correctly";
-        --ASSERT mosi = data_in(31) REPORT "MOSI did not output correctly";
 
         -- End simulation
         WAIT;
