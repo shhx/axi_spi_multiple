@@ -378,7 +378,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>396f3e18</spirit:value>
+            <spirit:value>c3666d37</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -394,7 +394,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>396f3e18</spirit:value>
+            <spirit:value>c3666d37</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -409,7 +409,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>7593ba0f</spirit:value>
+            <spirit:value>373a305c</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -423,7 +423,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>c1fc7f55</spirit:value>
+            <spirit:value>92088e12</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -1142,14 +1142,14 @@
       </xilinx:taxonomies>
       <xilinx:displayName>axi_spi_multiple</xilinx:displayName>
       <xilinx:definitionSource>package_project</xilinx:definitionSource>
-      <xilinx:coreRevision>31</xilinx:coreRevision>
-      <xilinx:coreCreationDateTime>2025-01-04T12:08:08Z</xilinx:coreCreationDateTime>
+      <xilinx:coreRevision>32</xilinx:coreRevision>
+      <xilinx:coreCreationDateTime>2025-01-06T23:17:34Z</xilinx:coreCreationDateTime>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2022.2</xilinx:xilinxVersion>
       <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="9a84b6c5"/>
       <xilinx:checksum xilinx:scope="memoryMaps" xilinx:value="a3be4f1a"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="fb2b6c6e"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="0ea089f2"/>
       <xilinx:checksum xilinx:scope="ports" xilinx:value="de8c6b86"/>
       <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="a9e0d2b2"/>
       <xilinx:checksum xilinx:scope="parameters" xilinx:value="84caf4c6"/>

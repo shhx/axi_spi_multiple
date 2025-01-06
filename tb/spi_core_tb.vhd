@@ -191,7 +191,7 @@ BEGIN
         WAIT FOR CLK_PERIOD * 5;
         transfer_inhibit <= '0'; -- Allow transfer
         wait for 165 ns;
-        WAIT FOR CLK_PERIOD * CLK_DIVIDER;
+        -- WAIT FOR CLK_PERIOD * CLK_DIVIDER;
         miso <= (OTHERS => '1');
         WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
         miso <= (OTHERS => '0');
@@ -217,7 +217,8 @@ BEGIN
         transfer_inhibit <= '1'; -- Inhibit transfer
         WAIT FOR CLK_PERIOD * 10;
         transfer_inhibit <= '0'; -- Allow transfer
-        wait for 165 ns;
+        WAIT FOR CLK_PERIOD * 6;
+        -- WAIT FOR CLK_PERIOD * CLK_DIVIDER;
         miso <= (OTHERS => '1');
         WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
         miso <= (OTHERS => '0');

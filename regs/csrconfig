@@ -9,14 +9,14 @@ force_name_case = upper
 regmap_path = spi_regs.yaml
 
 [vhdl_module]
-path = spi_regs.vhd
+path = ../hdl/spi_regs.vhd
 read_filler = 0
 interface = axil
 generator = Vhdl
 
-; [py]
-; path = sw/spi_regs.py
-; generator = Python
+[py]
+path = sw/spi_regs.py
+generator = Python
 
 [c_header]
 path = sw/spi_regs.h
@@ -24,9 +24,9 @@ prefix =
 generator = CHeader
 
 [md_doc]
-path = doc/spi_regs.md
+path = spi_regs.md
 title = Register map
 print_images = True
-image_dir = md_img
+image_dir = doc_img
 print_conventions = True
 generator = Markdown
