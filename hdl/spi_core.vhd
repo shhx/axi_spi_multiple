@@ -179,7 +179,7 @@ BEGIN
                         END IF;
 
                         -- Receive miso
-                        IF receive_transmit = '0' AND spi_clk_toggles < last_bit THEN
+                        IF receive_transmit = '1' AND spi_clk_toggles < last_bit THEN
                             miso_count <= miso_count + 1;
                         END IF;
 
