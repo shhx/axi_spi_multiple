@@ -57,3 +57,4 @@
 !package_ip.tcl
 .vscode/
 !spi_core_tb_behav.wcfg
+!README.md
