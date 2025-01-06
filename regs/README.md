@@ -60,10 +60,10 @@ Reset value: 0x00000500
 | Name             | Bits   | Mode            | Reset      | Description |
 | :---             | :---   | :---            | :---       | :---        |
 | -                | 31:15  | -               | 0x0000     | Reserved |
-| AUTOMATIC_MODE   | 14     | rw              | 0x0        | Automatic Mode |
+| AUTOMATIC_MODE   | 14     | rw              | 0x0        | Automatic Mode. Set to 1 to enable automatic spi transfers. |
 | XFER_COUNT       | 13:10  | rw              | 0x1        | Transfer Count |
 | LSB_FIRST        | 9      | rw              | 0x0        | LSB First -> 0 = MSB first transfer format. 1 = LSB first transfer format. |
-| TRANS_INHIBIT    | 8      | rw              | 0x1        | Inhibit data transfer |
+| TRANS_INHIBIT    | 8      | rw              | 0x1        | Inhibit data transfer. Set to 0 to start a data transfer. |
 | -                | 7:2    | -               | 0x0        | Reserved |
 | CPHA             | 1      | rw              | 0x0        | Clock Phase |
 | CPOL             | 0      | rw              | 0x0        | Clock Polarity |
@@ -83,7 +83,7 @@ Reset value: 0x0000000a
 | Name             | Bits   | Mode            | Reset      | Description |
 | :---             | :---   | :---            | :---       | :---        |
 | -                | 31:5   | -               | 0x000000   | Reserved |
-| AXIS_XFER_ERROR  | 4      | rwlh            | 0x0        | AXI Stream Transfer Error. Write to clear. |
+| AXIS_XFER_ERROR  | 4      | rwlh            | 0x0        | Write to clear. Set when the data from an spi transfer was not read by the AXI stream before the next transfer started. |
 | RX_EMPTY         | 3      | ro              | 0x1        | Receive FIFO Empty |
 | RX_FULL          | 2      | ro              | 0x0        | Receive FIFO Full |
 | TX_EMPTY         | 1      | ro              | 0x1        | Transmit FIFO Empty |
@@ -136,7 +136,7 @@ Reset value: 0x00000000
 
 | Name             | Bits   | Mode            | Reset      | Description |
 | :---             | :---   | :---            | :---       | :---        |
-| SS               | 31:0   | rw              | 0x00000000 | Slave Select |
+| SS               | 31:0   | rw              | 0x00000000 | Slave Select. Write 0 on the bit index to select that slave. |
 
 Back to [Register map](#register-map-summary).
 
@@ -152,6 +152,6 @@ Reset value: 0x00000000
 
 | Name             | Bits   | Mode            | Reset      | Description |
 | :---             | :---   | :---            | :---       | :---        |
-| CYCLES           | 31:0   | rw              | 0x00000000 | Number of cycles to wait |
+| CYCLES           | 31:0   | rw              | 0x00000000 | Number of cycles to wait between transfers when using automatic mode |
 
 Back to [Register map](#register-map-summary).

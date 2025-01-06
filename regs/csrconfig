@@ -24,7 +24,7 @@ prefix =
 generator = CHeader
 
 [md_doc]
-path = spi_regs.md
+path = README.md
 title = Register map
 print_images = True
 image_dir = doc_img

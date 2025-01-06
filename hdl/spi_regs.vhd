@@ -377,7 +377,7 @@ end process;
 
 -----------------------
 -- Bit field:
--- CONTROL(8) - TRANS_INHIBIT - Inhibit data transfer
+-- CONTROL(8) - TRANS_INHIBIT - Inhibit data transfer. Set to 0 to start a data transfer.
 -- access: rw, hardware: o
 -----------------------
 csr_control_rdata(8) <= csr_control_trans_inhibit_ff;
@@ -446,7 +446,7 @@ end process;
 
 -----------------------
 -- Bit field:
--- CONTROL(14) - AUTOMATIC_MODE - Automatic Mode
+-- CONTROL(14) - AUTOMATIC_MODE - Automatic Mode. Set to 1 to enable automatic spi transfers.
 -- access: rw, hardware: o
 -----------------------
 csr_control_rdata(14) <= csr_control_automatic_mode_ff;
@@ -562,7 +562,7 @@ end process;
 
 -----------------------
 -- Bit field:
--- STATUS(4) - AXIS_XFER_ERROR - AXI Stream Transfer Error. Write to clear.
+-- STATUS(4) - AXIS_XFER_ERROR - Write to clear. Set when the data from an spi transfer was not read by the AXI stream before the next transfer started.
 -- access: rwlh, hardware: i
 -----------------------
 csr_status_rdata(4) <= csr_status_axis_xfer_error_ff;
@@ -725,7 +725,7 @@ end process;
 
 -----------------------
 -- Bit field:
--- SLAVE_SELECT(31 downto 0) - SS - Slave Select
+-- SLAVE_SELECT(31 downto 0) - SS - Slave Select. Write 0 on the bit index to select that slave.
 -- access: rw, hardware: o
 -----------------------
 csr_slave_select_rdata(31 downto 0) <= csr_slave_select_ss_ff;
@@ -785,7 +785,7 @@ end process;
 
 -----------------------
 -- Bit field:
--- WAIT_CYCLES(31 downto 0) - CYCLES - Number of cycles to wait
+-- WAIT_CYCLES(31 downto 0) - CYCLES - Number of cycles to wait between transfers when using automatic mode
 -- access: rw, hardware: o
 -----------------------
 csr_wait_cycles_rdata(31 downto 0) <= csr_wait_cycles_cycles_ff;

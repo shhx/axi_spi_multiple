@@ -57,7 +57,7 @@ class _RegControl:
 
     @property
     def trans_inhibit(self):
-        """Inhibit data transfer"""
+        """Inhibit data transfer. Set to 0 to start a data transfer."""
         rdata = self._rmap._if.read(self._rmap.CONTROL_ADDR)
         return (rdata >> self._rmap.CONTROL_TRANS_INHIBIT_POS) & self._rmap.CONTROL_TRANS_INHIBIT_MSK
 
@@ -96,7 +96,7 @@ class _RegControl:
 
     @property
     def automatic_mode(self):
-        """Automatic Mode"""
+        """Automatic Mode. Set to 1 to enable automatic spi transfers."""
         rdata = self._rmap._if.read(self._rmap.CONTROL_ADDR)
         return (rdata >> self._rmap.CONTROL_AUTOMATIC_MODE_POS) & self._rmap.CONTROL_AUTOMATIC_MODE_MSK
 
@@ -138,7 +138,7 @@ class _RegStatus:
 
     @property
     def axis_xfer_error(self):
-        """AXI Stream Transfer Error. Write to clear."""
+        """Write to clear. Set when the data from an spi transfer was not read by the AXI stream before the next transfer started."""
         rdata = self._rmap._if.read(self._rmap.STATUS_ADDR)
         return (rdata >> self._rmap.STATUS_AXIS_XFER_ERROR_POS) & self._rmap.STATUS_AXIS_XFER_ERROR_MSK
 
@@ -192,7 +192,7 @@ class _RegSlave_select:
 
     @property
     def ss(self):
-        """Slave Select"""
+        """Slave Select. Write 0 on the bit index to select that slave."""
         rdata = self._rmap._if.read(self._rmap.SLAVE_SELECT_ADDR)
         return (rdata >> self._rmap.SLAVE_SELECT_SS_POS) & self._rmap.SLAVE_SELECT_SS_MSK
 
@@ -210,7 +210,7 @@ class _RegWait_cycles:
 
     @property
     def cycles(self):
-        """Number of cycles to wait"""
+        """Number of cycles to wait between transfers when using automatic mode"""
         rdata = self._rmap._if.read(self._rmap.WAIT_CYCLES_ADDR)
         return (rdata >> self._rmap.WAIT_CYCLES_CYCLES_POS) & self._rmap.WAIT_CYCLES_CYCLES_MSK
 

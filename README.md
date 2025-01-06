@@ -11,4 +11,5 @@ cd <project_dir>
 source package_ip.tcl
 ```
 
+## SPI interface
 https://www.analog.com/en/resources/analog-dialogue/articles/introduction-to-spi-interface.html

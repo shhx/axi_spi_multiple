@@ -29,7 +29,7 @@ regmap:
         access: rw
         hardware: o
     -   name: TRANS_INHIBIT
-        description: Inhibit data transfer
+        description: Inhibit data transfer. Set to 0 to start a data transfer.
         reset: 1
         width: 1
         lsb: 8
@@ -50,7 +50,7 @@ regmap:
         access: rw
         hardware: o
     -   name: AUTOMATIC_MODE
-        description: Automatic Mode
+        description: Automatic Mode. Set to 1 to enable automatic spi transfers.
         reset: 0
         width: 1
         lsb: 14
@@ -89,7 +89,7 @@ regmap:
         access: ro
         hardware: i
     -   name: AXIS_XFER_ERROR
-        description: AXI Stream Transfer Error. Write to clear.
+        description: Write to clear. Set when the data from an spi transfer was not read by the AXI stream before the next transfer started.
         reset: 0
         width: 1
         lsb: 4
@@ -122,7 +122,7 @@ regmap:
     description: Slave Select Register
     bitfields:
     -   name: SS
-        description: Slave Select
+        description: Slave Select. Write 0 on the bit index to select that slave.
         reset: 0
         width: 32
         lsb: 0
@@ -133,7 +133,7 @@ regmap:
     description: Wait Cycles Register
     bitfields:
     -   name: CYCLES
-        description: Number of cycles to wait
+        description: Number of cycles to wait between transfers when using automatic mode
         reset: 0
         width: 32
         lsb: 0

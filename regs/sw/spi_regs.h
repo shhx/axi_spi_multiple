@@ -37,10 +37,10 @@ typedef struct {
     uint32_t CPOL : 1; // Clock Polarity
     uint32_t CPHA : 1; // Clock Phase
     uint32_t : 6; // reserved
-    uint32_t TRANS_INHIBIT : 1; // Inhibit data transfer
+    uint32_t TRANS_INHIBIT : 1; // Inhibit data transfer. Set to 0 to start a data transfer.
     uint32_t LSB_FIRST : 1; // LSB First -> 0 = MSB first transfer format. 1 = LSB first transfer format.
     uint32_t XFER_COUNT : 4; // Transfer Count
-    uint32_t AUTOMATIC_MODE : 1; // Automatic Mode
+    uint32_t AUTOMATIC_MODE : 1; // Automatic Mode. Set to 1 to enable automatic spi transfers.
     uint32_t : 17; // reserved
 } spi_regs_control_t;
 
@@ -56,7 +56,7 @@ typedef struct {
 #define SPI_REGS_CONTROL_CPHA_MASK 0x2
 #define SPI_REGS_CONTROL_CPHA_RESET 0x0
 
-// CONTROL.TRANS_INHIBIT - Inhibit data transfer
+// CONTROL.TRANS_INHIBIT - Inhibit data transfer. Set to 0 to start a data transfer.
 #define SPI_REGS_CONTROL_TRANS_INHIBIT_WIDTH 1
 #define SPI_REGS_CONTROL_TRANS_INHIBIT_LSB 8
 #define SPI_REGS_CONTROL_TRANS_INHIBIT_MASK 0x100
@@ -74,7 +74,7 @@ typedef struct {
 #define SPI_REGS_CONTROL_XFER_COUNT_MASK 0x3c00
 #define SPI_REGS_CONTROL_XFER_COUNT_RESET 0x1
 
-// CONTROL.AUTOMATIC_MODE - Automatic Mode
+// CONTROL.AUTOMATIC_MODE - Automatic Mode. Set to 1 to enable automatic spi transfers.
 #define SPI_REGS_CONTROL_AUTOMATIC_MODE_WIDTH 1
 #define SPI_REGS_CONTROL_AUTOMATIC_MODE_LSB 14
 #define SPI_REGS_CONTROL_AUTOMATIC_MODE_MASK 0x4000
@@ -88,7 +88,7 @@ typedef struct {
     uint32_t TX_EMPTY : 1; // Transmit FIFO Empty
     uint32_t RX_FULL : 1; // Receive FIFO Full
     uint32_t RX_EMPTY : 1; // Receive FIFO Empty
-    uint32_t AXIS_XFER_ERROR : 1; // AXI Stream Transfer Error. Write to clear.
+    uint32_t AXIS_XFER_ERROR : 1; // Write to clear. Set when the data from an spi transfer was not read by the AXI stream before the next transfer started.
     uint32_t : 27; // reserved
 } spi_regs_status_t;
 
@@ -116,7 +116,7 @@ typedef struct {
 #define SPI_REGS_STATUS_RX_EMPTY_MASK 0x8
 #define SPI_REGS_STATUS_RX_EMPTY_RESET 0x1
 
-// STATUS.AXIS_XFER_ERROR - AXI Stream Transfer Error. Write to clear.
+// STATUS.AXIS_XFER_ERROR - Write to clear. Set when the data from an spi transfer was not read by the AXI stream before the next transfer started.
 #define SPI_REGS_STATUS_AXIS_XFER_ERROR_WIDTH 1
 #define SPI_REGS_STATUS_AXIS_XFER_ERROR_LSB 4
 #define SPI_REGS_STATUS_AXIS_XFER_ERROR_MASK 0x10
@@ -153,10 +153,10 @@ typedef struct {
 #define SPI_REGS_SLAVE_SELECT_ADDR 0x14
 #define SPI_REGS_SLAVE_SELECT_RESET 0x0
 typedef struct {
-    uint32_t SS : 32; // Slave Select
+    uint32_t SS : 32; // Slave Select. Write 0 on the bit index to select that slave.
 } spi_regs_slave_select_t;
 
-// SLAVE_SELECT.SS - Slave Select
+// SLAVE_SELECT.SS - Slave Select. Write 0 on the bit index to select that slave.
 #define SPI_REGS_SLAVE_SELECT_SS_WIDTH 32
 #define SPI_REGS_SLAVE_SELECT_SS_LSB 0
 #define SPI_REGS_SLAVE_SELECT_SS_MASK 0xffffffff
@@ -166,10 +166,10 @@ typedef struct {
 #define SPI_REGS_WAIT_CYCLES_ADDR 0x18
 #define SPI_REGS_WAIT_CYCLES_RESET 0x0
 typedef struct {
-    uint32_t CYCLES : 32; // Number of cycles to wait
+    uint32_t CYCLES : 32; // Number of cycles to wait between transfers when using automatic mode
 } spi_regs_wait_cycles_t;
 
-// WAIT_CYCLES.CYCLES - Number of cycles to wait
+// WAIT_CYCLES.CYCLES - Number of cycles to wait between transfers when using automatic mode
 #define SPI_REGS_WAIT_CYCLES_CYCLES_WIDTH 32
 #define SPI_REGS_WAIT_CYCLES_CYCLES_LSB 0
 #define SPI_REGS_WAIT_CYCLES_CYCLES_MASK 0xffffffff
