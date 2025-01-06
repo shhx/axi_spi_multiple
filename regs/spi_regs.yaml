@@ -130,10 +130,10 @@ regmap:
         hardware: o
 
 -   name: wait_cycles
-    description: Wait Cycles Register
+    description: Number of clock cycles to wait between transfers when using automatic mode.
     bitfields:
     -   name: CYCLES
-        description: Number of cycles to wait between transfers when using automatic mode
+        description: Number of clock cycles to wait between transfers. 
         reset: 0
         width: 32
         lsb: 0
