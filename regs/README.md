@@ -76,7 +76,7 @@ SPI Status register
 
 Address offset: 0x08
 
-Reset value: 0x0000000a
+Reset value: 0x00000005
 
 ![status](doc_img/status.svg)
 
@@ -84,10 +84,10 @@ Reset value: 0x0000000a
 | :---             | :---   | :---            | :---       | :---        |
 | -                | 31:5   | -               | 0x000000   | Reserved |
 | AXIS_XFER_ERROR  | 4      | rwlh            | 0x0        | Write to clear. Set when the data from an spi transfer was not read by the AXI stream before the next transfer started. |
-| RX_EMPTY         | 3      | ro              | 0x1        | Receive FIFO Empty |
-| RX_FULL          | 2      | ro              | 0x0        | Receive FIFO Full |
-| TX_EMPTY         | 1      | ro              | 0x1        | Transmit FIFO Empty |
-| TX_FULL          | 0      | ro              | 0x0        | Transmit FIFO Full |
+| TX_FULL          | 3      | ro              | 0x0        | Transmit FIFO Full |
+| TX_EMPTY         | 2      | ro              | 0x1        | Transmit FIFO Empty |
+| RX_FULL          | 1      | ro              | 0x0        | Receive FIFO Full |
+| RX_EMPTY         | 0      | ro              | 0x1        | Receive FIFO Empty |
 
 Back to [Register map](#register-map-summary).
 

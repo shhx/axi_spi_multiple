@@ -83,39 +83,39 @@ typedef struct {
 
 // STATUS - SPI Status register
 #define SPI_REGS_STATUS_ADDR 0x8
-#define SPI_REGS_STATUS_RESET 0xa
+#define SPI_REGS_STATUS_RESET 0x5
 typedef struct {
-    uint32_t TX_FULL : 1; // Transmit FIFO Full
-    uint32_t TX_EMPTY : 1; // Transmit FIFO Empty
-    uint32_t RX_FULL : 1; // Receive FIFO Full
     uint32_t RX_EMPTY : 1; // Receive FIFO Empty
+    uint32_t RX_FULL : 1; // Receive FIFO Full
+    uint32_t TX_EMPTY : 1; // Transmit FIFO Empty
+    uint32_t TX_FULL : 1; // Transmit FIFO Full
     uint32_t AXIS_XFER_ERROR : 1; // Write to clear. Set when the data from an spi transfer was not read by the AXI stream before the next transfer started.
     uint32_t : 27; // reserved
 } spi_regs_status_t;
 
-// STATUS.TX_FULL - Transmit FIFO Full
-#define SPI_REGS_STATUS_TX_FULL_WIDTH 1
-#define SPI_REGS_STATUS_TX_FULL_LSB 0
-#define SPI_REGS_STATUS_TX_FULL_MASK 0x1
-#define SPI_REGS_STATUS_TX_FULL_RESET 0x0
-
-// STATUS.TX_EMPTY - Transmit FIFO Empty
-#define SPI_REGS_STATUS_TX_EMPTY_WIDTH 1
-#define SPI_REGS_STATUS_TX_EMPTY_LSB 1
-#define SPI_REGS_STATUS_TX_EMPTY_MASK 0x2
-#define SPI_REGS_STATUS_TX_EMPTY_RESET 0x1
+// STATUS.RX_EMPTY - Receive FIFO Empty
+#define SPI_REGS_STATUS_RX_EMPTY_WIDTH 1
+#define SPI_REGS_STATUS_RX_EMPTY_LSB 0
+#define SPI_REGS_STATUS_RX_EMPTY_MASK 0x1
+#define SPI_REGS_STATUS_RX_EMPTY_RESET 0x1
 
 // STATUS.RX_FULL - Receive FIFO Full
 #define SPI_REGS_STATUS_RX_FULL_WIDTH 1
-#define SPI_REGS_STATUS_RX_FULL_LSB 2
-#define SPI_REGS_STATUS_RX_FULL_MASK 0x4
+#define SPI_REGS_STATUS_RX_FULL_LSB 1
+#define SPI_REGS_STATUS_RX_FULL_MASK 0x2
 #define SPI_REGS_STATUS_RX_FULL_RESET 0x0
 
-// STATUS.RX_EMPTY - Receive FIFO Empty
-#define SPI_REGS_STATUS_RX_EMPTY_WIDTH 1
-#define SPI_REGS_STATUS_RX_EMPTY_LSB 3
-#define SPI_REGS_STATUS_RX_EMPTY_MASK 0x8
-#define SPI_REGS_STATUS_RX_EMPTY_RESET 0x1
+// STATUS.TX_EMPTY - Transmit FIFO Empty
+#define SPI_REGS_STATUS_TX_EMPTY_WIDTH 1
+#define SPI_REGS_STATUS_TX_EMPTY_LSB 2
+#define SPI_REGS_STATUS_TX_EMPTY_MASK 0x4
+#define SPI_REGS_STATUS_TX_EMPTY_RESET 0x1
+
+// STATUS.TX_FULL - Transmit FIFO Full
+#define SPI_REGS_STATUS_TX_FULL_WIDTH 1
+#define SPI_REGS_STATUS_TX_FULL_LSB 3
+#define SPI_REGS_STATUS_TX_FULL_MASK 0x8
+#define SPI_REGS_STATUS_TX_FULL_RESET 0x0
 
 // STATUS.AXIS_XFER_ERROR - Write to clear. Set when the data from an spi transfer was not read by the AXI stream before the next transfer started.
 #define SPI_REGS_STATUS_AXIS_XFER_ERROR_WIDTH 1

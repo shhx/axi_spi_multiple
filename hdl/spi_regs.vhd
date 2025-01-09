@@ -28,14 +28,14 @@ port(
     -- CONTROL.AUTOMATIC_MODE
     csr_control_automatic_mode_out : out std_logic;
 
-    -- STATUS.TX_FULL
-    csr_status_tx_full_in : in std_logic;
-    -- STATUS.TX_EMPTY
-    csr_status_tx_empty_in : in std_logic;
-    -- STATUS.RX_FULL
-    csr_status_rx_full_in : in std_logic;
     -- STATUS.RX_EMPTY
     csr_status_rx_empty_in : in std_logic;
+    -- STATUS.RX_FULL
+    csr_status_rx_full_in : in std_logic;
+    -- STATUS.TX_EMPTY
+    csr_status_tx_empty_in : in std_logic;
+    -- STATUS.TX_FULL
+    csr_status_tx_full_in : in std_logic;
     -- STATUS.AXIS_XFER_ERROR
     csr_status_axis_xfer_error_in : in std_logic;
 
@@ -124,10 +124,10 @@ signal csr_status_wen : std_logic;
 signal csr_status_wen_ff : std_logic;
 signal csr_status_ren : std_logic;
 signal csr_status_ren_ff : std_logic;
-signal csr_status_tx_full_ff : std_logic;
-signal csr_status_tx_empty_ff : std_logic;
-signal csr_status_rx_full_ff : std_logic;
 signal csr_status_rx_empty_ff : std_logic;
+signal csr_status_rx_full_ff : std_logic;
+signal csr_status_tx_empty_ff : std_logic;
+signal csr_status_tx_full_ff : std_logic;
 signal csr_status_axis_xfer_error_ff : std_logic;
 
 signal csr_clk_div_rdata : std_logic_vector(31 downto 0);
@@ -496,42 +496,26 @@ end process;
 
 -----------------------
 -- Bit field:
--- STATUS(0) - TX_FULL - Transmit FIFO Full
+-- STATUS(0) - RX_EMPTY - Receive FIFO Empty
 -- access: ro, hardware: i
 -----------------------
-csr_status_rdata(0) <= csr_status_tx_full_ff;
+csr_status_rdata(0) <= csr_status_rx_empty_ff;
 process (clk) begin
 if rising_edge(clk) then
 if (rst = '0') then
-    csr_status_tx_full_ff <= '0'; -- 0x0
+    csr_status_rx_empty_ff <= '1'; -- 0x1
 else
-            csr_status_tx_full_ff <= csr_status_tx_full_in;
+            csr_status_rx_empty_ff <= csr_status_rx_empty_in;
 end if;
 end if;
 end process;
 
 -----------------------
 -- Bit field:
--- STATUS(1) - TX_EMPTY - Transmit FIFO Empty
+-- STATUS(1) - RX_FULL - Receive FIFO Full
 -- access: ro, hardware: i
 -----------------------
-csr_status_rdata(1) <= csr_status_tx_empty_ff;
-process (clk) begin
-if rising_edge(clk) then
-if (rst = '0') then
-    csr_status_tx_empty_ff <= '1'; -- 0x1
-else
-            csr_status_tx_empty_ff <= csr_status_tx_empty_in;
-end if;
-end if;
-end process;
-
------------------------
--- Bit field:
--- STATUS(2) - RX_FULL - Receive FIFO Full
--- access: ro, hardware: i
------------------------
-csr_status_rdata(2) <= csr_status_rx_full_ff;
+csr_status_rdata(1) <= csr_status_rx_full_ff;
 process (clk) begin
 if rising_edge(clk) then
 if (rst = '0') then
@@ -544,16 +528,32 @@ end process;
 
 -----------------------
 -- Bit field:
--- STATUS(3) - RX_EMPTY - Receive FIFO Empty
+-- STATUS(2) - TX_EMPTY - Transmit FIFO Empty
 -- access: ro, hardware: i
 -----------------------
-csr_status_rdata(3) <= csr_status_rx_empty_ff;
+csr_status_rdata(2) <= csr_status_tx_empty_ff;
 process (clk) begin
 if rising_edge(clk) then
 if (rst = '0') then
-    csr_status_rx_empty_ff <= '1'; -- 0x1
+    csr_status_tx_empty_ff <= '1'; -- 0x1
 else
-            csr_status_rx_empty_ff <= csr_status_rx_empty_in;
+            csr_status_tx_empty_ff <= csr_status_tx_empty_in;
+end if;
+end if;
+end process;
+
+-----------------------
+-- Bit field:
+-- STATUS(3) - TX_FULL - Transmit FIFO Full
+-- access: ro, hardware: i
+-----------------------
+csr_status_rdata(3) <= csr_status_tx_full_ff;
+process (clk) begin
+if rising_edge(clk) then
+if (rst = '0') then
+    csr_status_tx_full_ff <= '0'; -- 0x0
+else
+            csr_status_tx_full_ff <= csr_status_tx_full_in;
 end if;
 end if;
 end process;

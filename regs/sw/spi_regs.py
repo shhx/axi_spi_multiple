@@ -113,16 +113,10 @@ class _RegStatus:
         self._rmap = rmap
 
     @property
-    def tx_full(self):
-        """Transmit FIFO Full"""
+    def rx_empty(self):
+        """Receive FIFO Empty"""
         rdata = self._rmap._if.read(self._rmap.STATUS_ADDR)
-        return (rdata >> self._rmap.STATUS_TX_FULL_POS) & self._rmap.STATUS_TX_FULL_MSK
-
-    @property
-    def tx_empty(self):
-        """Transmit FIFO Empty"""
-        rdata = self._rmap._if.read(self._rmap.STATUS_ADDR)
-        return (rdata >> self._rmap.STATUS_TX_EMPTY_POS) & self._rmap.STATUS_TX_EMPTY_MSK
+        return (rdata >> self._rmap.STATUS_RX_EMPTY_POS) & self._rmap.STATUS_RX_EMPTY_MSK
 
     @property
     def rx_full(self):
@@ -131,10 +125,16 @@ class _RegStatus:
         return (rdata >> self._rmap.STATUS_RX_FULL_POS) & self._rmap.STATUS_RX_FULL_MSK
 
     @property
-    def rx_empty(self):
-        """Receive FIFO Empty"""
+    def tx_empty(self):
+        """Transmit FIFO Empty"""
         rdata = self._rmap._if.read(self._rmap.STATUS_ADDR)
-        return (rdata >> self._rmap.STATUS_RX_EMPTY_POS) & self._rmap.STATUS_RX_EMPTY_MSK
+        return (rdata >> self._rmap.STATUS_TX_EMPTY_POS) & self._rmap.STATUS_TX_EMPTY_MSK
+
+    @property
+    def tx_full(self):
+        """Transmit FIFO Full"""
+        rdata = self._rmap._if.read(self._rmap.STATUS_ADDR)
+        return (rdata >> self._rmap.STATUS_TX_FULL_POS) & self._rmap.STATUS_TX_FULL_MSK
 
     @property
     def axis_xfer_error(self):
@@ -247,14 +247,14 @@ class RegMap:
 
     # STATUS - SPI Status register
     STATUS_ADDR = 0x08
-    STATUS_TX_FULL_POS = 0
-    STATUS_TX_FULL_MSK = 0x1
-    STATUS_TX_EMPTY_POS = 1
-    STATUS_TX_EMPTY_MSK = 0x1
-    STATUS_RX_FULL_POS = 2
-    STATUS_RX_FULL_MSK = 0x1
-    STATUS_RX_EMPTY_POS = 3
+    STATUS_RX_EMPTY_POS = 0
     STATUS_RX_EMPTY_MSK = 0x1
+    STATUS_RX_FULL_POS = 1
+    STATUS_RX_FULL_MSK = 0x1
+    STATUS_TX_EMPTY_POS = 2
+    STATUS_TX_EMPTY_MSK = 0x1
+    STATUS_TX_FULL_POS = 3
+    STATUS_TX_FULL_MSK = 0x1
     STATUS_AXIS_XFER_ERROR_POS = 4
     STATUS_AXIS_XFER_ERROR_MSK = 0x1
 

@@ -60,30 +60,30 @@ regmap:
 -   name: status
     description: SPI Status register
     bitfields:
-    -   name: TX_FULL
-        description: Transmit FIFO Full
-        reset: 0
-        width: 1
-        lsb: 0
-        access: ro
-        hardware: i
-    -   name: TX_EMPTY
-        description: Transmit FIFO Empty
+    -   name: RX_EMPTY
+        description: Receive FIFO Empty
         reset: 1
         width: 1
-        lsb: 1
+        lsb: 0
         access: ro
         hardware: i
     -   name: RX_FULL
         description: Receive FIFO Full
         reset: 0
         width: 1
+        lsb: 1
+        access: ro
+        hardware: i
+    -   name: TX_EMPTY
+        description: Transmit FIFO Empty
+        reset: 1
+        width: 1
         lsb: 2
         access: ro
         hardware: i
-    -   name: RX_EMPTY
-        description: Receive FIFO Empty
-        reset: 1
+    -   name: TX_FULL
+        description: Transmit FIFO Full
+        reset: 0
         width: 1
         lsb: 3
         access: ro
