@@ -102,7 +102,7 @@ ARCHITECTURE Behavioral OF spi_core IS
     SIGNAL miso_count : INTEGER RANGE 0 TO 8 * MAX_NUMBER_READS := 0;
 
     -- Axi Stream signals
-    SIGNAL result_index : INTEGER RANGE 0 TO N_SENSORS - 1 := 0;
+    SIGNAL result_index : INTEGER RANGE 0 TO N_SENSORS := 0;
     SIGNAL prev_spi_transfer_done : STD_LOGIC := '0';
     SIGNAL axis_transfer_done : STD_LOGIC := '0';
     SIGNAL axi_transfer_error : STD_LOGIC := '0';
