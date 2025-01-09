@@ -4,7 +4,7 @@ regmap:
     address: 0
     bitfields:
     -   name: RESET
-        description: Reset the SPI
+        description: Reset the SPI core. Write 1 to reset.
         reset: 0
         width: 1
         lsb: 0
@@ -15,14 +15,14 @@ regmap:
     description: SPI Control register
     bitfields:
     -   name: CPOL
-        description: Clock Polarity
+        description: Clock Polarity. Set to 0 for low when idle. Set to 1 for high when idle.
         reset: 0
         width: 1
         lsb: 0
         access: rw
         hardware: o
     -   name: CPHA
-        description: Clock Phase
+        description: Clock Phase. Set to 0 for first edge capture. Set to 1 for second edge capture.
         reset: 0
         width: 1
         lsb: 1
@@ -43,7 +43,7 @@ regmap:
         access: rw
         hardware: o
     -   name: XFER_COUNT
-        description: Transfer Count
+        description: Number of 8bit transfers to perform. Set to 1 to transfer 1 byte.
         reset: 1
         width: 4
         lsb: 10

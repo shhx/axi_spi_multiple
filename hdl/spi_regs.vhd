@@ -1,6 +1,3 @@
-
-
-
 -- Created with Corsair vgit-latest
 library ieee;
 use ieee.std_logic_1164.all;
@@ -423,7 +420,7 @@ end process;
 
 -----------------------
 -- Bit field:
--- CONTROL(13 downto 10) - XFER_COUNT - Transfer Count
+-- CONTROL(13 downto 10) - XFER_COUNT - Number of 8bit transfers to perform. Set to 1 to transfer 1 byte.
 -- access: rw, hardware: o
 -----------------------
 csr_control_rdata(13 downto 10) <= csr_control_xfer_count_ff;
@@ -757,7 +754,7 @@ end process;
 
 --------------------------------------------------------------------------------
 -- CSR:
--- [0x18] - WAIT_CYCLES - Wait Cycles Register
+-- [0x18] - WAIT_CYCLES - Number of clock cycles to wait between transfers when using automatic mode.
 --------------------------------------------------------------------------------
 
 csr_wait_cycles_wen <= wen when (waddr = std_logic_vector(to_unsigned(24, ADDR_W))) else '0'; -- 0x18
@@ -785,7 +782,7 @@ end process;
 
 -----------------------
 -- Bit field:
--- WAIT_CYCLES(31 downto 0) - CYCLES - Number of cycles to wait between transfers when using automatic mode
+-- WAIT_CYCLES(31 downto 0) - CYCLES - Number of clock cycles to wait between transfers.
 -- access: rw, hardware: o
 -----------------------
 csr_wait_cycles_rdata(31 downto 0) <= csr_wait_cycles_cycles_ff;

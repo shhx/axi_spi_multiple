@@ -39,7 +39,7 @@ typedef struct {
     uint32_t : 6; // reserved
     uint32_t TRANS_INHIBIT : 1; // Inhibit data transfer. Set to 0 to start a data transfer.
     uint32_t LSB_FIRST : 1; // LSB First -> 0 = MSB first transfer format. 1 = LSB first transfer format.
-    uint32_t XFER_COUNT : 4; // Transfer Count
+    uint32_t XFER_COUNT : 4; // Number of 8bit transfers to perform. Set to 1 to transfer 1 byte.
     uint32_t AUTOMATIC_MODE : 1; // Automatic Mode. Set to 1 to enable automatic spi transfers.
     uint32_t : 17; // reserved
 } spi_regs_control_t;
@@ -68,7 +68,7 @@ typedef struct {
 #define SPI_REGS_CONTROL_LSB_FIRST_MASK 0x200
 #define SPI_REGS_CONTROL_LSB_FIRST_RESET 0x0
 
-// CONTROL.XFER_COUNT - Transfer Count
+// CONTROL.XFER_COUNT - Number of 8bit transfers to perform. Set to 1 to transfer 1 byte.
 #define SPI_REGS_CONTROL_XFER_COUNT_WIDTH 4
 #define SPI_REGS_CONTROL_XFER_COUNT_LSB 10
 #define SPI_REGS_CONTROL_XFER_COUNT_MASK 0x3c00
@@ -162,14 +162,14 @@ typedef struct {
 #define SPI_REGS_SLAVE_SELECT_SS_MASK 0xffffffff
 #define SPI_REGS_SLAVE_SELECT_SS_RESET 0x0
 
-// WAIT_CYCLES - Wait Cycles Register
+// WAIT_CYCLES - Number of clock cycles to wait between transfers when using automatic mode.
 #define SPI_REGS_WAIT_CYCLES_ADDR 0x18
 #define SPI_REGS_WAIT_CYCLES_RESET 0x0
 typedef struct {
-    uint32_t CYCLES : 32; // Number of cycles to wait between transfers when using automatic mode
+    uint32_t CYCLES : 32; // Number of clock cycles to wait between transfers.
 } spi_regs_wait_cycles_t;
 
-// WAIT_CYCLES.CYCLES - Number of cycles to wait between transfers when using automatic mode
+// WAIT_CYCLES.CYCLES - Number of clock cycles to wait between transfers.
 #define SPI_REGS_WAIT_CYCLES_CYCLES_WIDTH 32
 #define SPI_REGS_WAIT_CYCLES_CYCLES_LSB 0
 #define SPI_REGS_WAIT_CYCLES_CYCLES_MASK 0xffffffff
@@ -203,7 +203,7 @@ typedef struct {
         __IO spi_regs_slave_select_t SLAVE_SELECT_bf; // Bit access for SLAVE_SELECT register
     };
     union {
-        __IO uint32_t WAIT_CYCLES; // Wait Cycles Register
+        __IO uint32_t WAIT_CYCLES; // Number of clock cycles to wait between transfers when using automatic mode.
         __IO spi_regs_wait_cycles_t WAIT_CYCLES_bf; // Bit access for WAIT_CYCLES register
     };
 } spi_regs_t;

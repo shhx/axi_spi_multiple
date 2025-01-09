@@ -28,7 +28,7 @@ Base address: 0x00000000
 | [CLK_DIV](#clk_div)      | 0x0c       | Clock Divider register |
 | [TX_DATA](#tx_data)      | 0x10       | Data Transmit Register |
 | [SLAVE_SELECT](#slave_select) | 0x14       | Slave Select Register |
-| [WAIT_CYCLES](#wait_cycles) | 0x18       | Wait Cycles Register |
+| [WAIT_CYCLES](#wait_cycles) | 0x18       | Number of clock cycles to wait between transfers when using automatic mode. |
 
 ## RESET
 
@@ -61,7 +61,7 @@ Reset value: 0x00000500
 | :---             | :---   | :---            | :---       | :---        |
 | -                | 31:15  | -               | 0x0000     | Reserved |
 | AUTOMATIC_MODE   | 14     | rw              | 0x0        | Automatic Mode. Set to 1 to enable automatic spi transfers. |
-| XFER_COUNT       | 13:10  | rw              | 0x1        | Transfer Count |
+| XFER_COUNT       | 13:10  | rw              | 0x1        | Number of 8bit transfers to perform. Set to 1 to transfer 1 byte. |
 | LSB_FIRST        | 9      | rw              | 0x0        | LSB First -> 0 = MSB first transfer format. 1 = LSB first transfer format. |
 | TRANS_INHIBIT    | 8      | rw              | 0x1        | Inhibit data transfer. Set to 0 to start a data transfer. |
 | -                | 7:2    | -               | 0x0        | Reserved |
@@ -142,7 +142,7 @@ Back to [Register map](#register-map-summary).
 
 ## WAIT_CYCLES
 
-Wait Cycles Register
+Number of clock cycles to wait between transfers when using automatic mode.
 
 Address offset: 0x18
 
@@ -152,6 +152,6 @@ Reset value: 0x00000000
 
 | Name             | Bits   | Mode            | Reset      | Description |
 | :---             | :---   | :---            | :---       | :---        |
-| CYCLES           | 31:0   | rw              | 0x00000000 | Number of cycles to wait between transfers when using automatic mode |
+| CYCLES           | 31:0   | rw              | 0x00000000 | Number of clock cycles to wait between transfers. |
 
 Back to [Register map](#register-map-summary).

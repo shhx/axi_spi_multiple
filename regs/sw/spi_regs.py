@@ -83,7 +83,7 @@ class _RegControl:
 
     @property
     def xfer_count(self):
-        """Transfer Count"""
+        """Number of 8bit transfers to perform. Set to 1 to transfer 1 byte."""
         rdata = self._rmap._if.read(self._rmap.CONTROL_ADDR)
         return (rdata >> self._rmap.CONTROL_XFER_COUNT_POS) & self._rmap.CONTROL_XFER_COUNT_MSK
 
@@ -210,7 +210,7 @@ class _RegWait_cycles:
 
     @property
     def cycles(self):
-        """Number of cycles to wait between transfers when using automatic mode"""
+        """Number of clock cycles to wait between transfers."""
         rdata = self._rmap._if.read(self._rmap.WAIT_CYCLES_ADDR)
         return (rdata >> self._rmap.WAIT_CYCLES_CYCLES_POS) & self._rmap.WAIT_CYCLES_CYCLES_MSK
 
@@ -273,7 +273,7 @@ class RegMap:
     SLAVE_SELECT_SS_POS = 0
     SLAVE_SELECT_SS_MSK = 0xffffffff
 
-    # WAIT_CYCLES - Wait Cycles Register
+    # WAIT_CYCLES - Number of clock cycles to wait between transfers when using automatic mode.
     WAIT_CYCLES_ADDR = 0x18
     WAIT_CYCLES_CYCLES_POS = 0
     WAIT_CYCLES_CYCLES_MSK = 0xffffffff
@@ -361,7 +361,7 @@ class RegMap:
 
     @property
     def wait_cycles(self):
-        """Wait Cycles Register"""
+        """Number of clock cycles to wait between transfers when using automatic mode."""
         return self._if.read(self.WAIT_CYCLES_ADDR)
 
     @wait_cycles.setter
