@@ -18,14 +18,14 @@ regmap:
         description: Clock Polarity. Set to 0 for low when idle. Set to 1 for high when idle.
         reset: 0
         width: 1
-        lsb: 0
+        lsb: 3
         access: rw
         hardware: o
     -   name: CPHA
         description: Clock Phase. Set to 0 for first edge capture. Set to 1 for second edge capture.
         reset: 0
         width: 1
-        lsb: 1
+        lsb: 4
         access: rw
         hardware: o
     -   name: TRANS_INHIBIT

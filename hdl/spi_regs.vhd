@@ -275,7 +275,7 @@ end process;
 
 -----------------------
 -- Bit field:
--- RESET(0) - RESET - Reset the SPI
+-- RESET(0) - RESET - Reset the SPI core. Write 1 to reset.
 -- access: rw, hardware: o
 -----------------------
 csr_reset_rdata(0) <= csr_reset_reset_ff;
@@ -300,7 +300,8 @@ end process;
 -- CSR:
 -- [0x4] - CONTROL - SPI Control register
 --------------------------------------------------------------------------------
-csr_control_rdata(7 downto 2) <= (others => '0');
+csr_control_rdata(2 downto 0) <= (others => '0');
+csr_control_rdata(7 downto 5) <= (others => '0');
 csr_control_rdata(31 downto 15) <= (others => '0');
 
 csr_control_wen <= wen when (waddr = std_logic_vector(to_unsigned(4, ADDR_W))) else '0'; -- 0x4
@@ -328,10 +329,10 @@ end process;
 
 -----------------------
 -- Bit field:
--- CONTROL(0) - CPOL - Clock Polarity
+-- CONTROL(3) - CPOL - Clock Polarity. Set to 0 for low when idle. Set to 1 for high when idle.
 -- access: rw, hardware: o
 -----------------------
-csr_control_rdata(0) <= csr_control_cpol_ff;
+csr_control_rdata(3) <= csr_control_cpol_ff;
 csr_control_cpol_out <= csr_control_cpol_ff;
 process (clk) begin
 if rising_edge(clk) then
@@ -340,7 +341,7 @@ if (rst = '0') then
 else
         if (csr_control_wen = '1') then
             if (wstrb(0) = '1') then
-                csr_control_cpol_ff <= wdata(0);
+                csr_control_cpol_ff <= wdata(3);
             end if;
         else
             csr_control_cpol_ff <= csr_control_cpol_ff;
@@ -351,10 +352,10 @@ end process;
 
 -----------------------
 -- Bit field:
--- CONTROL(1) - CPHA - Clock Phase
+-- CONTROL(4) - CPHA - Clock Phase. Set to 0 for first edge capture. Set to 1 for second edge capture.
 -- access: rw, hardware: o
 -----------------------
-csr_control_rdata(1) <= csr_control_cpha_ff;
+csr_control_rdata(4) <= csr_control_cpha_ff;
 csr_control_cpha_out <= csr_control_cpha_ff;
 process (clk) begin
 if rising_edge(clk) then
@@ -363,7 +364,7 @@ if (rst = '0') then
 else
         if (csr_control_wen = '1') then
             if (wstrb(0) = '1') then
-                csr_control_cpha_ff <= wdata(1);
+                csr_control_cpha_ff <= wdata(4);
             end if;
         else
             csr_control_cpha_ff <= csr_control_cpha_ff;

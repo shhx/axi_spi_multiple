@@ -43,7 +43,7 @@ Reset value: 0x00000000
 | Name             | Bits   | Mode            | Reset      | Description |
 | :---             | :---   | :---            | :---       | :---        |
 | -                | 31:1   | -               | 0x0000000  | Reserved |
-| RESET            | 0      | rw              | 0x0        | Reset the SPI |
+| RESET            | 0      | rw              | 0x0        | Reset the SPI core. Write 1 to reset. |
 
 Back to [Register map](#register-map-summary).
 
@@ -64,9 +64,9 @@ Reset value: 0x00000500
 | XFER_COUNT       | 13:10  | rw              | 0x1        | Number of 8bit transfers to perform. Set to 1 to transfer 1 byte. |
 | LSB_FIRST        | 9      | rw              | 0x0        | LSB First -> 0 = MSB first transfer format. 1 = LSB first transfer format. |
 | TRANS_INHIBIT    | 8      | rw              | 0x1        | Inhibit data transfer. Set to 0 to start a data transfer. |
-| -                | 7:2    | -               | 0x0        | Reserved |
-| CPHA             | 1      | rw              | 0x0        | Clock Phase |
-| CPOL             | 0      | rw              | 0x0        | Clock Polarity |
+| -                | 7:5    | -               | 0x0        | Reserved |
+| CPHA             | 4      | rw              | 0x0        | Clock Phase. Set to 0 for first edge capture. Set to 1 for second edge capture. |
+| CPOL             | 3      | rw              | 0x0        | Clock Polarity. Set to 0 for low when idle. Set to 1 for high when idle. |
 
 Back to [Register map](#register-map-summary).
 

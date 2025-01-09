@@ -13,7 +13,7 @@ class _RegReset:
 
     @property
     def reset(self):
-        """Reset the SPI"""
+        """Reset the SPI core. Write 1 to reset."""
         rdata = self._rmap._if.read(self._rmap.RESET_ADDR)
         return (rdata >> self._rmap.RESET_RESET_POS) & self._rmap.RESET_RESET_MSK
 
@@ -31,7 +31,7 @@ class _RegControl:
 
     @property
     def cpol(self):
-        """Clock Polarity"""
+        """Clock Polarity. Set to 0 for low when idle. Set to 1 for high when idle."""
         rdata = self._rmap._if.read(self._rmap.CONTROL_ADDR)
         return (rdata >> self._rmap.CONTROL_CPOL_POS) & self._rmap.CONTROL_CPOL_MSK
 
@@ -44,7 +44,7 @@ class _RegControl:
 
     @property
     def cpha(self):
-        """Clock Phase"""
+        """Clock Phase. Set to 0 for first edge capture. Set to 1 for second edge capture."""
         rdata = self._rmap._if.read(self._rmap.CONTROL_ADDR)
         return (rdata >> self._rmap.CONTROL_CPHA_POS) & self._rmap.CONTROL_CPHA_MSK
 
@@ -232,9 +232,9 @@ class RegMap:
 
     # CONTROL - SPI Control register
     CONTROL_ADDR = 0x04
-    CONTROL_CPOL_POS = 0
+    CONTROL_CPOL_POS = 3
     CONTROL_CPOL_MSK = 0x1
-    CONTROL_CPHA_POS = 1
+    CONTROL_CPHA_POS = 4
     CONTROL_CPHA_MSK = 0x1
     CONTROL_TRANS_INHIBIT_POS = 8
     CONTROL_TRANS_INHIBIT_MSK = 0x1

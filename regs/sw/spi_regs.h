@@ -20,11 +20,11 @@ extern "C" {
 #define SPI_REGS_RESET_ADDR 0x0
 #define SPI_REGS_RESET_RESET 0x0
 typedef struct {
-    uint32_t RESET : 1; // Reset the SPI
+    uint32_t RESET : 1; // Reset the SPI core. Write 1 to reset.
     uint32_t : 31; // reserved
 } spi_regs_reset_t;
 
-// RESET.RESET - Reset the SPI
+// RESET.RESET - Reset the SPI core. Write 1 to reset.
 #define SPI_REGS_RESET_RESET_WIDTH 1
 #define SPI_REGS_RESET_RESET_LSB 0
 #define SPI_REGS_RESET_RESET_MASK 0x1
@@ -34,9 +34,10 @@ typedef struct {
 #define SPI_REGS_CONTROL_ADDR 0x4
 #define SPI_REGS_CONTROL_RESET 0x500
 typedef struct {
-    uint32_t CPOL : 1; // Clock Polarity
-    uint32_t CPHA : 1; // Clock Phase
-    uint32_t : 6; // reserved
+    uint32_t : 3; // reserved
+    uint32_t CPOL : 1; // Clock Polarity. Set to 0 for low when idle. Set to 1 for high when idle.
+    uint32_t CPHA : 1; // Clock Phase. Set to 0 for first edge capture. Set to 1 for second edge capture.
+    uint32_t : 3; // reserved
     uint32_t TRANS_INHIBIT : 1; // Inhibit data transfer. Set to 0 to start a data transfer.
     uint32_t LSB_FIRST : 1; // LSB First -> 0 = MSB first transfer format. 1 = LSB first transfer format.
     uint32_t XFER_COUNT : 4; // Number of 8bit transfers to perform. Set to 1 to transfer 1 byte.
@@ -44,16 +45,16 @@ typedef struct {
     uint32_t : 17; // reserved
 } spi_regs_control_t;
 
-// CONTROL.CPOL - Clock Polarity
+// CONTROL.CPOL - Clock Polarity. Set to 0 for low when idle. Set to 1 for high when idle.
 #define SPI_REGS_CONTROL_CPOL_WIDTH 1
-#define SPI_REGS_CONTROL_CPOL_LSB 0
-#define SPI_REGS_CONTROL_CPOL_MASK 0x1
+#define SPI_REGS_CONTROL_CPOL_LSB 3
+#define SPI_REGS_CONTROL_CPOL_MASK 0x8
 #define SPI_REGS_CONTROL_CPOL_RESET 0x0
 
-// CONTROL.CPHA - Clock Phase
+// CONTROL.CPHA - Clock Phase. Set to 0 for first edge capture. Set to 1 for second edge capture.
 #define SPI_REGS_CONTROL_CPHA_WIDTH 1
-#define SPI_REGS_CONTROL_CPHA_LSB 1
-#define SPI_REGS_CONTROL_CPHA_MASK 0x2
+#define SPI_REGS_CONTROL_CPHA_LSB 4
+#define SPI_REGS_CONTROL_CPHA_MASK 0x10
 #define SPI_REGS_CONTROL_CPHA_RESET 0x0
 
 // CONTROL.TRANS_INHIBIT - Inhibit data transfer. Set to 0 to start a data transfer.
