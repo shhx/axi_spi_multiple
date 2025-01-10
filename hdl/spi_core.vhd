@@ -120,11 +120,9 @@ BEGIN
     -- SPI Clock Generation FSM
     PROCESS (clk, rst)
         VARIABLE SPI_CLK_CYCLES : INTEGER := 0;
-        VARIABLE SPI_CLK_CYCLES_HALF : INTEGER := SPI_CLK_CYCLES / 2;
     BEGIN
         last_bit <= bits_to_transfer * 2;
         SPI_CLK_CYCLES := to_integer(unsigned(clk_div));
-        SPI_CLK_CYCLES_HALF := SPI_CLK_CYCLES / 2;
         IF rst = '0' THEN
             wait_count <= 0;
             spi_clk_toggles <= 0;
