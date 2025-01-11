@@ -61,6 +61,7 @@ END ENTITY;
 ARCHITECTURE rtl OF spi_top IS
 
     SIGNAL csr_reset_reset_out : STD_LOGIC;
+    SIGNAL whole_reset : STD_LOGIC;
     SIGNAL csr_control_cpol_out : STD_LOGIC;
     SIGNAL csr_control_cpha_out : STD_LOGIC;
     SIGNAL csr_control_trans_inhibit_out : STD_LOGIC;
@@ -79,7 +80,7 @@ ARCHITECTURE rtl OF spi_top IS
     SIGNAL csr_slave_select_ss_out : STD_LOGIC_VECTOR(31 DOWNTO 0);
     SIGNAL csr_wait_cycles_cycles_out : STD_LOGIC_VECTOR(31 DOWNTO 0);
 BEGIN
-
+    whole_reset <= rst AND NOT csr_reset_reset_out;
     -- Instantiate SPI Core
     spi_core_inst : ENTITY work.spi_core
         GENERIC MAP(
@@ -91,7 +92,7 @@ BEGIN
         )
         PORT MAP(
             clk              => spi_clk,
-            rst              => rst,
+            rst              => whole_reset,
             sck              => sck,
             cs               => cs,
             mosi             => mosi,
