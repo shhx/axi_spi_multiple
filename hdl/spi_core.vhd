@@ -161,12 +161,12 @@ BEGIN
                 WHEN TRANSFER =>
                     IF clk_count = SPI_CLK_CYCLES - 1 THEN
                         clk_count <= 0;
-                        receive_transmit <= NOT receive_transmit;
                         IF spi_clk_toggles = last_bit THEN
                             spi_clk_toggles <= 0;
                             spi_transfer_done <= '1';
                             state <= CS_HIGH_WAIT;
                         ELSE
+                            receive_transmit <= NOT receive_transmit;
                             spi_clk_toggles <= spi_clk_toggles + 1;
                             spi_transfer_done <= '0';
                         END IF;
@@ -177,7 +177,7 @@ BEGIN
                         END IF;
 
                         -- Receive miso
-                        IF receive_transmit = '1' AND spi_clk_toggles < last_bit THEN
+                        IF receive_transmit = '0' AND spi_clk_toggles < last_bit THEN
                             miso_count <= miso_count + 1;
                         END IF;
 
@@ -246,28 +246,33 @@ BEGIN
     END PROCESS;
 
     -- Process for MISO count
-    PROCESS (rst, miso_count, state)
+    PROCESS (clk)
     BEGIN
-        IF rst = '0' THEN
-            FOR i IN 0 TO N_SENSORS - 1 LOOP
-                sensor_data(i) <= (OTHERS => '0');
-            END LOOP;
-        ELSIF state = TRANSFER THEN
-            IF miso_count > 0 THEN
-                IF lsb_first = '1' THEN
-                    FOR i IN 0 TO N_SENSORS - 1 LOOP
-                        sensor_data(i)(miso_count - 1) <= miso(i);
-                    END LOOP;
-                ELSE
-                    FOR i IN 0 TO N_SENSORS - 1 LOOP
-                        sensor_data(i)(bits_to_transfer - miso_count) <= miso(i);
-                    END LOOP;
+        IF rising_edge(clk) THEN
+            IF rst = '0' THEN
+                FOR i IN 0 TO N_SENSORS - 1 LOOP
+                    sensor_data(i) <= (OTHERS => '0');
+                END LOOP;
+            ELSIF state = CS_LOW_WAIT THEN
+                FOR i IN 0 TO N_SENSORS - 1 LOOP
+                    sensor_data(i) <= (OTHERS => '0');
+                END LOOP;
+            ELSE
+                receive_transmit_ff <= receive_transmit;
+                IF receive_transmit = '1' AND receive_transmit_ff = '0' THEN
+                    IF miso_count > 0 AND miso_count < bits_to_transfer + 1 THEN
+                        IF lsb_first = '1' THEN
+                            FOR i IN 0 TO N_SENSORS - 1 LOOP
+                                sensor_data(i)(miso_count - 1) <= miso(i);
+                            END LOOP;
+                        ELSE
+                            FOR i IN 0 TO N_SENSORS - 1 LOOP
+                                sensor_data(i)(bits_to_transfer - miso_count) <= miso(i);
+                            END LOOP;
+                        END IF;
+                    END IF;
                 END IF;
             END IF;
-        ELSIF state = CS_LOW_WAIT THEN
-            FOR i IN 0 TO N_SENSORS - 1 LOOP
-                sensor_data(i) <= (OTHERS => '0');
-            END LOOP;
         END IF;
     END PROCESS;
 
@@ -315,6 +320,7 @@ BEGIN
                 s_axis_out_tlast <= '0';
             END IF;
 
+            prev_spi_transfer_done <= spi_transfer_done;
             IF prev_spi_transfer_done = '1' AND spi_transfer_done = '0' AND axis_transfer_done = '0' THEN
                 axi_transfer_error <= '1';
             ELSE
