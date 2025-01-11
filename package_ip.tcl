@@ -28,12 +28,6 @@ import_files -fileset sources_1 ./component.xml
 # Define the top module
 set_property "top" "spi_top" [current_fileset]
 
-# Add register definition file (optional)
-if {[file exists $regs_dir/spi_regs.vhd]} {
-    puts "Adding register definition file..."
-    add_files -norecurse $regs_dir/spi_regs.vhd
-}
-
 # Package the IP
 puts "Packaging the IP..."
 ipx::open_ipxact_file $project_dir/component.xml
@@ -42,7 +36,6 @@ set_property version $ip_version [ipx::current_core]
 # Update checksums and save
 ipx::update_checksums [ipx::current_core]
 ipx::save_core [ipx::current_core]
-
 
 # Cleanup and finish
 puts "IP core packaged successfully: $ip_name $ip_version"
