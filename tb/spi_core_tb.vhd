@@ -60,6 +60,7 @@ ARCHITECTURE Behavioral OF spi_core_tb IS
 
     -- Signals to connect to the UUT
     CONSTANT MAX_NUMBER_READS : INTEGER := 4;
+    CONSTANT XFER_COUNT_NUM: INTEGER := 4;
     CONSTANT N_SENSORS : INTEGER := 10;
     CONSTANT N_CHIP_SELECTS : INTEGER := 2;
     CONSTANT STREAM_WIDTH : INTEGER := 32;
@@ -171,9 +172,9 @@ BEGIN
         cpha <= '0'; -- Set CPHA
         cpol <= '0'; -- Set CPOL
         lsb_first <= '0'; -- MSB first
-        selected_cs <= B"10"; -- Select CS0
+        selected_cs <= B"11"; -- Select CS0
         transfer_inhibit <= '1'; -- Allow transfer
-        xfer_count <= STD_LOGIC_VECTOR(to_unsigned(1, xfer_count'length)); -- Set number of transfers
+        xfer_count <= STD_LOGIC_VECTOR(to_unsigned(XFER_COUNT_NUM, xfer_count'length)); -- Set number of transfers
         long_wait_cycles <= X"0000_0100"; -- Set long wait cycles
         automatic_transfers <= '0'; -- Disable automatic transfers
 
@@ -187,11 +188,14 @@ BEGIN
 
         -- Provide input data
         data_tx <= X"0000_00AA";
-        miso <= (OTHERS => '1');
+        miso <= (OTHERS => '0');
+        selected_cs <= B"10"; -- Select CS0
         WAIT FOR CLK_PERIOD * 5;
         transfer_inhibit <= '0'; -- Allow transfer
+        -- miso <= (OTHERS => '1');
         wait for 165 ns;
-        -- WAIT FOR CLK_PERIOD * CLK_DIVIDER;
+        selected_cs <= B"11";
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER;
         miso <= (OTHERS => '1');
         WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
         miso <= (OTHERS => '0');
@@ -200,10 +204,14 @@ BEGIN
         WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
         miso <= (OTHERS => '0');
         WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '0');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '1');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
         miso <= (OTHERS => '1');
 
 
-        WAIT FOR CLK_PERIOD * 400;
+        WAIT FOR CLK_PERIOD * 600;
 
         -- s_axis_out_tready <= '0';
         -- WAIT FOR CLK_PERIOD * 500;
@@ -218,9 +226,7 @@ BEGIN
         WAIT FOR CLK_PERIOD * 10;
         transfer_inhibit <= '0'; -- Allow transfer
         WAIT FOR CLK_PERIOD * 6;
-        -- WAIT FOR CLK_PERIOD * CLK_DIVIDER;
-        miso <= (OTHERS => '1');
-        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER;
         miso <= (OTHERS => '0');
         WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
         miso <= (OTHERS => '1');
@@ -228,10 +234,23 @@ BEGIN
         miso <= (OTHERS => '0');
         WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
         miso <= (OTHERS => '1');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '0');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '0');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '1');
+        WAIT FOR CLK_PERIOD * CLK_DIVIDER * 2;
+        miso <= (OTHERS => '0');
 
-        WAIT FOR CLK_PERIOD * 400;
-        automatic_transfers <= '1'; -- Disable automatic transfers
+        WAIT FOR CLK_PERIOD * 600;
+        transfer_inhibit <= '1';
+        automatic_transfers <= '1'; -- Enable automatic transfers
+        WAIT FOR CLK_PERIOD * 10;
+        transfer_inhibit <= '0';
         wait for CLK_PERIOD * 1000;
+        transfer_inhibit <= '1';
+
 
         -- End simulation
         WAIT;
